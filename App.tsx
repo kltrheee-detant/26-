@@ -7,36 +7,30 @@ import {
   LayoutDashboard, 
   MessageSquare, 
   Plus, 
-  Search,
-  ChevronRight,
-  MapPin,
-  Clock,
   Settings,
   Wallet,
   CloudCheck,
   RefreshCw
 } from 'lucide-react';
-import { View, Outing, Member, RoundScore, FeeRecord } from './types';
-import Dashboard from './components/Dashboard';
-import OutingList from './components/OutingList';
-import MemberList from './components/MemberList';
-import ScoringBoard from './components/ScoringBoard';
-import AICaddy from './components/AICaddy';
-import FeeManagement from './components/FeeManagement';
-import SettingsView from './components/SettingsView';
-import { storageService } from './services/storageService';
+import { View, Outing, Member, RoundScore, FeeRecord } from './types.ts';
+import Dashboard from './components/Dashboard.tsx';
+import OutingList from './components/OutingList.tsx';
+import MemberList from './components/MemberList.tsx';
+import ScoringBoard from './components/ScoringBoard.tsx';
+import AICaddy from './components/AICaddy.tsx';
+import FeeManagement from './components/FeeManagement.tsx';
+import SettingsView from './components/SettingsView.tsx';
+import { storageService } from './services/storageService.ts';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
   
-  // 초기 데이터 상태
   const [members, setMembers] = useState<Member[]>([]);
   const [outings, setOutings] = useState<Outing[]>([]);
   const [scores, setScores] = useState<RoundScore[]>([]);
   const [fees, setFees] = useState<FeeRecord[]>([]);
 
-  // 1. 데이터 로드 (최초 실행시)
   useEffect(() => {
     const savedMembers = storageService.loadMembers();
     const savedOutings = storageService.loadOutings();
@@ -55,9 +49,8 @@ const App: React.FC = () => {
     if (savedFees) setFees(savedFees);
   }, []);
 
-  // 2. 데이터 자동 저장 및 싱크 애니메이션
   useEffect(() => {
-    if (members.length > 0) {
+    if (members.length > 0 || outings.length > 0 || scores.length > 0 || fees.length > 0) {
       storageService.saveMembers(members);
       storageService.saveOutings(outings);
       storageService.saveScores(scores);
@@ -100,7 +93,6 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-['Noto_Sans_KR']">
-      {/* 사이드바 - 데스크탑 */}
       <nav className="hidden md:flex flex-col w-64 bg-emerald-900 text-white p-6">
         <div className="flex items-center gap-3 mb-10 px-2">
           <div className="bg-white p-2 rounded-lg shadow-inner">
@@ -129,16 +121,13 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      {/* 메인 콘텐츠 영역 */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* 상단 헤더 */}
         <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-4">
             <div className="md:hidden flex items-center">
               <Trophy className="text-emerald-700 w-8 h-8 mr-2" />
               <h1 className="text-xl font-bold text-emerald-900">동물원</h1>
             </div>
-            {/* 동기화 상태 표시기 */}
             <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full">
               {isSyncing ? <RefreshCw size={10} className="animate-spin" /> : <CloudCheck size={12} />}
               {isSyncing ? '동기화 중...' : '클라우드 보호됨'}
@@ -159,12 +148,10 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {/* 다이내믹 콘텐츠 */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
           {renderView()}
         </main>
 
-        {/* 모바일 네비게이션 */}
         <nav className="md:hidden bg-white border-t border-slate-200 flex justify-around p-3 sticky bottom-0 z-10">
           <MobileNavItem icon={<LayoutDashboard />} active={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
           <MobileNavItem icon={<Calendar />} active={activeView === 'outings'} onClick={() => setActiveView('outings')} />

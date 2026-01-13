@@ -1,6 +1,6 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { POCHEON_HILLS_DATA } from "./pocheonHillsData";
+import { POCHEON_HILLS_DATA } from "./pocheonHillsData.ts";
 
 const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
@@ -42,7 +42,7 @@ export const getCourseInfo = async (location: string) => {
     const ai = getAI();
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: `${location} 주변의 최고 골프 코스는 어디인가요? 난이도와 시그니처 홀에 대한 간략한 정보를 한국어로 알려주세요.`,
         config: {
           tools: [{ googleMaps: {} }]

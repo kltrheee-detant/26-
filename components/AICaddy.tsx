@@ -1,8 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, ExternalLink, Map as MapIcon, Info, ChevronRight, Target, Flag, ImageIcon, Layout } from 'lucide-react';
-import { getGolfAdvice } from '../services/geminiService';
-import { POCHEON_HILLS_DATA } from '../services/pocheonHillsData';
+import { getGolfAdvice } from '../services/geminiService.ts';
+import { POCHEON_HILLS_DATA } from '../services/pocheonHillsData.ts';
 
 interface Message {
   id: string;
@@ -12,7 +12,6 @@ interface Message {
 }
 
 const AICaddy: React.FC = () => {
-  // 'strategy' (코스 공략도)를 기본 탭으로 설정
   const [activeTab, setActiveTab] = useState<'chat' | 'strategy'>('strategy');
   const [messages, setMessages] = useState<Message[]>([
     { 
@@ -74,7 +73,6 @@ const AICaddy: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto h-[calc(100vh-10rem)] flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden font-['Noto_Sans_KR']">
-      {/* 헤더 */}
       <div className="p-4 border-b border-slate-100 bg-emerald-50 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-lg">
