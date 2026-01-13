@@ -1,18 +1,23 @@
 
 import React, { useState } from 'react';
 import { Outing, Member } from '../types.ts';
-import { Calendar, MapPin, Plus, MoreHorizontal, Filter, X, Check, Users } from 'lucide-react';
+import { Calendar, MapPin, Plus, MoreHorizontal, Filter, X, Check, Users, Edit3, Trash2 } from 'lucide-react';
 
 interface Props {
   outings: Outing[];
   members: Member[];
   onAdd: (outing: Outing) => void;
+  onUpdate: (outing: Outing) => void;
+  onDelete: (id: string) => void;
   onToggleParticipant: (outingId: string, memberId: string) => void;
 }
 
-const OutingList: React.FC<Props> = ({ outings, members, onAdd, onToggleParticipant }) => {
+const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDelete, onToggleParticipant }) => {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingOuting, setEditingOuting] = useState<Outing | null>(null);
   const [joiningOutingId, setJoiningOutingId] = useState<string | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
   const [newOuting, setNewOuting] = useState({
     title: '',
     date: '',
@@ -20,7 +25,7 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onToggleParticip
     location: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onAdd({
       ...newOuting,
@@ -30,6 +35,14 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onToggleParticip
     } as Outing);
     setShowAddModal(false);
     setNewOuting({ title: '', date: '', courseName: '', location: '' });
+  };
+
+  const handleUpdateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingOuting) {
+      onUpdate(editingOuting);
+      setEditingOuting(null);
+    }
   };
 
   const currentJoiningOuting = outings.find(o => o.id === joiningOutingId);
@@ -58,12 +71,42 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onToggleParticip
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {outings.map((outing) => (
-          <div key={outing.id} className="bg-white rounded-2xl overflow-hidden border border-slate-200 hover:shadow-lg transition-all group">
+          <div key={outing.id} className="bg-white rounded-2xl overflow-hidden border border-slate-200 hover:shadow-lg transition-all group relative">
             <div className="h-32 bg-emerald-900 relative overflow-hidden">
               <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/golf/800/400')] bg-cover bg-center opacity-40 mix-blend-overlay group-hover:scale-110 transition-transform duration-700"></div>
-              <div className="absolute top-4 right-4 bg-white/10 backdrop-blur-md p-2 rounded-lg text-white border border-white/20 hover:bg-white/20 transition-colors cursor-pointer">
-                <MoreHorizontal size={20} />
+              
+              {/* 카드 더보기 메뉴 */}
+              <div className="absolute top-4 right-4 z-20">
+                <button 
+                  onClick={() => setActiveMenuId(activeMenuId === outing.id ? null : outing.id)}
+                  className="bg-white/10 backdrop-blur-md p-2 rounded-lg text-white border border-white/20 hover:bg-white/20 transition-colors"
+                >
+                  <MoreHorizontal size={20} />
+                </button>
+                {activeMenuId === outing.id && (
+                  <div className="absolute top-full right-0 mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <button 
+                      onClick={() => {
+                        setEditingOuting(outing);
+                        setActiveMenuId(null);
+                      }}
+                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2 transition-colors"
+                    >
+                      <Edit3 size={14} /> 수정하기
+                    </button>
+                    <button 
+                      onClick={() => {
+                        onDelete(outing.id);
+                        setActiveMenuId(null);
+                      }}
+                      className="w-full px-4 py-2.5 text-left text-xs font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors border-t border-slate-50"
+                    >
+                      <Trash2 size={14} /> 삭제하기
+                    </button>
+                  </div>
+                )}
               </div>
+
               <div className="absolute bottom-4 left-4">
                  <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-wider ${
                    outing.status === 'upcoming' ? 'bg-emerald-100 text-emerald-800 shadow-sm' : 'bg-slate-200 text-slate-700'
@@ -130,13 +173,13 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onToggleParticip
 
       {/* 새 일정 등록 모달 */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h3 className="text-xl font-bold text-slate-800">새 라운딩 일정</h3>
               <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleAddSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">일정 제목</label>
                 <input 
@@ -202,9 +245,80 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onToggleParticip
         </div>
       )}
 
+      {/* 일정 수정 모달 */}
+      {editingOuting && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-xl font-bold text-slate-800">일정 정보 수정</h3>
+              <button onClick={() => setEditingOuting(null)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+            </div>
+            <form onSubmit={handleUpdateSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">일정 제목</label>
+                <input 
+                  required
+                  type="text" 
+                  value={editingOuting.title}
+                  onChange={e => setEditingOuting({...editingOuting, title: e.target.value})}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-bold" 
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">날짜</label>
+                  <input 
+                    required
+                    type="date" 
+                    value={editingOuting.date}
+                    onChange={e => setEditingOuting({...editingOuting, date: e.target.value})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">지역/도시</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={editingOuting.location}
+                    onChange={e => setEditingOuting({...editingOuting, location: e.target.value})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all" 
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">골프장 이름</label>
+                <input 
+                  required
+                  type="text" 
+                  value={editingOuting.courseName}
+                  onChange={e => setEditingOuting({...editingOuting, courseName: e.target.value})}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-bold text-emerald-700" 
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button 
+                  type="button" 
+                  onClick={() => setEditingOuting(null)}
+                  className="flex-1 py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-2xl border border-slate-200 transition-all"
+                >
+                  취소
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 py-4 text-sm font-black text-white bg-emerald-600 hover:bg-emerald-700 rounded-2xl transition-all shadow-lg"
+                >
+                  수정 완료
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* 참가 신청 멤버 선택 모달 */}
       {joiningOutingId && currentJoiningOuting && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
             <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
               <div>
@@ -259,7 +373,7 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onToggleParticip
                 onClick={() => setJoiningOutingId(null)}
                 className="w-full py-4 bg-slate-800 text-white rounded-2xl font-black text-sm hover:bg-slate-900 transition-all shadow-lg"
               >
-                변경 내용 저장
+                닫기
               </button>
             </div>
           </div>

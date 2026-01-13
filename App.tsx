@@ -64,6 +64,15 @@ const App: React.FC = () => {
   }, [members, outings, scores, fees]);
 
   const handleAddOuting = (newOuting: Outing) => setOutings(prev => [newOuting, ...prev]);
+  const handleUpdateOuting = (updatedOuting: Outing) => {
+    setOutings(prev => prev.map(o => o.id === updatedOuting.id ? updatedOuting : o));
+  };
+  const handleDeleteOuting = (id: string) => {
+    if (window.confirm('이 라운딩 일정을 삭제하시겠습니까?')) {
+      setOutings(prev => prev.filter(o => o.id !== id));
+    }
+  };
+
   const handleAddMember = (newMember: Member) => setMembers(prev => [...prev, newMember]);
   const handleDeleteMember = (memberId: string) => {
     if (window.confirm('이 멤버를 정말 삭제하시겠습니까? 관련 기록에서 해당 멤버의 정보가 표시되지 않을 수 있습니다.')) {
@@ -94,7 +103,16 @@ const App: React.FC = () => {
       case 'dashboard':
         return <Dashboard outings={outings} scores={scores} members={members} fees={fees} />;
       case 'outings':
-        return <OutingList outings={outings} onAdd={handleAddOuting} onToggleParticipant={handleToggleParticipant} members={members} />;
+        return (
+          <OutingList 
+            outings={outings} 
+            onAdd={handleAddOuting} 
+            onUpdate={handleUpdateOuting}
+            onDelete={handleDeleteOuting}
+            onToggleParticipant={handleToggleParticipant} 
+            members={members} 
+          />
+        );
       case 'members':
         return <MemberList members={members} onAdd={handleAddMember} onDelete={handleDeleteMember} />;
       case 'scores':
@@ -113,11 +131,14 @@ const App: React.FC = () => {
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-['Noto_Sans_KR']">
       <nav className="hidden md:flex flex-col w-64 bg-emerald-900 text-white p-6">
-        <div className="flex items-center gap-3 mb-10 px-2">
-          <div className="bg-white p-2 rounded-lg shadow-inner">
+        <div 
+          className="flex items-center gap-3 mb-10 px-2 cursor-pointer group"
+          onClick={() => setActiveView('dashboard')}
+        >
+          <div className="bg-white p-2 rounded-lg shadow-inner group-hover:scale-110 transition-transform">
             <Trophy className="text-emerald-900 w-6 h-6" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-white">동물원</h1>
+          <h1 className="text-xl font-bold tracking-tight text-white group-hover:text-emerald-300 transition-colors">동물원</h1>
         </div>
         
         <div className="space-y-2 flex-1">
@@ -141,9 +162,12 @@ const App: React.FC = () => {
       </nav>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:px-8">
+        <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 md:px-8 shrink-0">
           <div className="flex items-center gap-4">
-            <div className="md:hidden flex items-center">
+            <div 
+              className="md:hidden flex items-center cursor-pointer"
+              onClick={() => setActiveView('dashboard')}
+            >
               <Trophy className="text-emerald-700 w-8 h-8 mr-2" />
               <h1 className="text-xl font-bold text-emerald-900">동물원</h1>
             </div>
@@ -155,15 +179,16 @@ const App: React.FC = () => {
           
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => setActiveView('outings')}
+              onClick={() => {
+                setActiveView('outings');
+                // 일정 추가 모달을 여는 것은 OutingList 내부 상태이므로, 뷰 전환 후 사용자가 '새 일정 만들기'를 누르도록 유도
+              }}
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
             >
               <Plus size={18} />
               <span className="hidden sm:inline">새 라운딩</span>
             </button>
-            <div className="w-10 h-10 rounded-full bg-emerald-100 border-2 border-emerald-200 overflow-hidden flex items-center justify-center text-emerald-700 font-bold">
-              KS
-            </div>
+            {/* KS 아이콘 제거됨 */}
           </div>
         </header>
 
