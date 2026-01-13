@@ -80,7 +80,11 @@ const App: React.FC = () => {
     }
   };
   const handleAddScore = (newScore: RoundScore) => setScores(prev => [newScore, ...prev]);
+  
   const handleAddFee = (newFee: FeeRecord) => setFees(prev => [newFee, ...prev]);
+  const handleUpdateFee = (updatedFee: FeeRecord) => {
+    setFees(prev => prev.map(f => f.id === updatedFee.id ? updatedFee : f));
+  };
   const handleToggleFeeStatus = (feeId: string) => {
     setFees(prev => prev.map(f => f.id === feeId ? { ...f, status: f.status === 'paid' ? 'unpaid' : 'paid' } : f));
   };
@@ -120,7 +124,7 @@ const App: React.FC = () => {
       case 'ai-caddy':
         return <AICaddy />;
       case 'fees':
-        return <FeeManagement fees={fees} members={members} onToggleStatus={handleToggleFeeStatus} onAdd={handleAddFee} />;
+        return <FeeManagement fees={fees} members={members} onToggleStatus={handleToggleFeeStatus} onAdd={handleAddFee} onUpdate={handleUpdateFee} />;
       case 'settings':
         return <SettingsView onReload={() => window.location.reload()} />;
       default:
@@ -181,14 +185,12 @@ const App: React.FC = () => {
             <button 
               onClick={() => {
                 setActiveView('outings');
-                // 일정 추가 모달을 여는 것은 OutingList 내부 상태이므로, 뷰 전환 후 사용자가 '새 일정 만들기'를 누르도록 유도
               }}
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
             >
               <Plus size={18} />
               <span className="hidden sm:inline">새 라운딩</span>
             </button>
-            {/* KS 아이콘 제거됨 */}
           </div>
         </header>
 

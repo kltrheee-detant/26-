@@ -1,19 +1,21 @@
 
 import React, { useState } from 'react';
 import { FeeRecord, Member } from '../types.ts';
-import { Wallet, Search, Filter, CheckCircle2, XCircle, Plus, Calendar, X, Target, Info } from 'lucide-react';
+import { Wallet, Search, Filter, CheckCircle2, XCircle, Plus, Calendar, X, Target, Info, Edit3 } from 'lucide-react';
 
 interface Props {
   fees: FeeRecord[];
   members: Member[];
   onToggleStatus: (feeId: string) => void;
   onAdd: (fee: FeeRecord) => void;
+  onUpdate: (fee: FeeRecord) => void;
 }
 
-const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd }) => {
+const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, onUpdate }) => {
   const [filter, setFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editingFee, setEditingFee] = useState<FeeRecord | null>(null);
   
   // New fee states
   const [memberId, setMemberId] = useState('');
@@ -42,6 +44,14 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd }
 
     setMemberId('');
     setShowModal(false);
+  };
+
+  const handleUpdateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingFee) {
+      onUpdate(editingFee);
+      setEditingFee(null);
+    }
   };
 
   const totalCollected = fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + f.amount, 0);
@@ -174,16 +184,25 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd }
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={() => onToggleStatus(fee.id)}
-                        className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all shadow-sm ${
-                          fee.status === 'paid' 
-                          ? 'bg-white border-slate-200 text-slate-400 hover:text-slate-600' 
-                          : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600'
-                        }`}
-                      >
-                        {fee.status === 'paid' ? '취소' : '확인'}
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => setEditingFee(fee)}
+                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                          title="금액 수정"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button 
+                          onClick={() => onToggleStatus(fee.id)}
+                          className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all shadow-sm ${
+                            fee.status === 'paid' 
+                            ? 'bg-white border-slate-200 text-slate-400 hover:text-slate-600' 
+                            : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600'
+                          }`}
+                        >
+                          {fee.status === 'paid' ? '취소' : '확인'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -200,7 +219,7 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd }
 
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h3 className="text-xl font-bold text-slate-800">회비 청구 등록</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
@@ -248,6 +267,62 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd }
               >
                 청구서 발송
               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 회비 내역 수정 모달 */}
+      {editingFee && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-xl font-bold text-slate-800">청구 내역 수정</h3>
+              <button onClick={() => setEditingFee(null)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+            </div>
+            <form onSubmit={handleUpdateSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">대상 멤버</label>
+                <div className="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-500">
+                  {members.find(m => m.id === editingFee.memberId)?.name} {members.find(m => m.id === editingFee.memberId)?.nickname && `(${members.find(m => m.id === editingFee.memberId)?.nickname})`}
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">항목명</label>
+                <input 
+                  required
+                  type="text" 
+                  value={editingFee.purpose}
+                  onChange={e => setEditingFee({...editingFee, purpose: e.target.value})}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" 
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">금액 (원)</label>
+                <input 
+                  required
+                  type="number" 
+                  value={editingFee.amount}
+                  onChange={e => setEditingFee({...editingFee, amount: parseInt(e.target.value)})}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-emerald-600" 
+                  step="1000"
+                />
+              </div>
+              <div className="flex gap-3 mt-4">
+                <button 
+                  type="button"
+                  onClick={() => setEditingFee(null)}
+                  className="flex-1 py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-2xl border border-slate-200 transition-all"
+                >
+                  취소
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 py-4 text-sm font-black text-white bg-emerald-600 hover:bg-emerald-700 rounded-2xl transition-all shadow-lg"
+                >
+                  수정 완료
+                </button>
+              </div>
             </form>
           </div>
         </div>
