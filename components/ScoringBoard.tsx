@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { RoundScore, Member, Outing } from '../types';
+import { RoundScore, Member, Outing } from '../types.ts';
 import { Trophy, TrendingDown, Target, Plus, X, Camera, Image as ImageIcon, Calendar, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 
 interface Props {

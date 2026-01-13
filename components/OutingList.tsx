@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Outing, Member } from '../types';
+import { Outing, Member } from '../types.ts';
 import { Calendar, MapPin, Plus, MoreHorizontal, Filter } from 'lucide-react';
 
 interface Props {

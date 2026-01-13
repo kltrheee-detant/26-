@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Outing, RoundScore, Member, FeeRecord } from '../types';
+import { Outing, RoundScore, Member, FeeRecord } from '../types.ts';
 import { 
   XAxis, 
   YAxis, 

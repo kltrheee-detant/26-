@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { storageService } from '../services/storageService';
+import { storageService } from '../services/storageService.ts';
 import { Download, Upload, Share2, ShieldCheck, Database, Check, Copy } from 'lucide-react';
 
 interface Props {
@@ -58,6 +58,7 @@ const SettingsView: React.FC<Props> = ({ onReload }) => {
           <div className="pt-6 border-t border-slate-100">
             <h4 className="text-sm font-bold text-slate-700 mb-2">데이터 가져오기</h4>
             <p className="text-xs text-slate-500 mb-4">공유받은 데이터 코드를 아래에 붙여넣으세요. 기존 데이터가 덮어씌워집니다.</p>
+            <p className="text-xs text-amber-600 font-bold mb-2">※ 주의: 기존 데이터가 덮어씌워집니다.</p>
             <textarea 
               value={importText}
               onChange={(e) => setImportText(e.target.value)}
@@ -90,7 +91,7 @@ const SettingsView: React.FC<Props> = ({ onReload }) => {
       </div>
 
       <div className="text-center">
-        <p className="text-xs text-slate-400">동물원 골프 커뮤니티 v1.0.2</p>
+        <p className="text-xs text-slate-400">동물원 골프 커뮤니티 v1.0.3</p>
       </div>
     </div>
   );

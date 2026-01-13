@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Member } from '../types';
+import { Member } from '../types.ts';
 import { UserPlus, Search, MoreVertical, X, Wallet, Tag } from 'lucide-react';
 
 interface Props {

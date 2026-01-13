@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { FeeRecord, Member } from '../types';
+import { FeeRecord, Member } from '../types.ts';
 import { Wallet, Search, Filter, CheckCircle2, XCircle, Plus, Calendar, X, Target, Info } from 'lucide-react';
 
 interface Props {
