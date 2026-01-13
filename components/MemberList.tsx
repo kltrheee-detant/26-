@@ -1,19 +1,21 @@
 
 import React, { useState } from 'react';
 import { Member } from '../types.ts';
-import { UserPlus, Search, MoreVertical, X, Wallet, Tag } from 'lucide-react';
+import { UserPlus, Search, Trash2, X, Wallet, Tag } from 'lucide-react';
 
 interface Props {
   members: Member[];
   onAdd: (member: Member) => void;
+  onDelete: (id: string) => void;
 }
 
-const MemberList: React.FC<Props> = ({ members, onAdd }) => {
+const MemberList: React.FC<Props> = ({ members, onAdd, onDelete }) => {
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
   const [handicap, setHandicap] = useState('18');
   const [annualFee, setAnnualFee] = useState('500000');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +36,11 @@ const MemberList: React.FC<Props> = ({ members, onAdd }) => {
     setAnnualFee('500000');
     setShowModal(false);
   };
+
+  const filteredMembers = members.filter(m => 
+    m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    m.nickname?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -57,12 +64,14 @@ const MemberList: React.FC<Props> = ({ members, onAdd }) => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input 
               type="text" 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="멤버 이름 또는 닉네임 검색..." 
               className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
             />
           </div>
           <div className="text-sm text-slate-500 font-medium">
-            총 멤버: <span className="font-bold text-emerald-600">{members.length}</span>명
+            검색 결과: <span className="font-bold text-emerald-600">{filteredMembers.length}</span> / {members.length}명
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -72,12 +81,11 @@ const MemberList: React.FC<Props> = ({ members, onAdd }) => {
                 <th className="px-6 py-4">성명 (닉네임)</th>
                 <th className="px-6 py-4">핸디캡</th>
                 <th className="px-6 py-4">책정 연회비</th>
-                <th className="px-6 py-4">평균 타수</th>
-                <th className="px-6 py-4 text-right">관리</th>
+                <th className="px-6 py-4 text-right">삭제</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {members.map(member => (
+              {filteredMembers.map(member => (
                 <tr key={member.id} className="hover:bg-slate-50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -106,14 +114,24 @@ const MemberList: React.FC<Props> = ({ members, onAdd }) => {
                       <span className="text-sm font-bold text-slate-700">{(member.annualFeeTarget || 0).toLocaleString()}원</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-slate-800">84.5타</td>
                   <td className="px-6 py-4 text-right">
-                    <button className="p-2 text-slate-300 hover:text-slate-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-lg transition-all">
-                      <MoreVertical size={18} />
+                    <button 
+                      onClick={() => onDelete(member.id)}
+                      className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                      title="멤버 삭제"
+                    >
+                      <Trash2 size={18} />
                     </button>
                   </td>
                 </tr>
               ))}
+              {filteredMembers.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic text-sm">
+                    검색 결과가 없습니다.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
