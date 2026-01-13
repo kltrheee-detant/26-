@@ -74,12 +74,24 @@ const App: React.FC = () => {
   };
 
   const handleAddMember = (newMember: Member) => setMembers(prev => [...prev, newMember]);
+  const handleUpdateMember = (updatedMember: Member) => {
+    setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
+  };
   const handleDeleteMember = (memberId: string) => {
     if (window.confirm('이 멤버를 정말 삭제하시겠습니까? 관련 기록에서 해당 멤버의 정보가 표시되지 않을 수 있습니다.')) {
       setMembers(prev => prev.filter(m => m.id !== memberId));
     }
   };
+  
   const handleAddScore = (newScore: RoundScore) => setScores(prev => [newScore, ...prev]);
+  const handleUpdateScore = (updatedScore: RoundScore) => {
+    setScores(prev => prev.map(s => s.id === updatedScore.id ? updatedScore : s));
+  };
+  const handleDeleteScore = (id: string) => {
+    if (window.confirm('이 스코어 기록을 삭제하시겠습니까?')) {
+      setScores(prev => prev.filter(s => s.id !== id));
+    }
+  };
   
   const handleAddFee = (newFee: FeeRecord) => setFees(prev => [newFee, ...prev]);
   const handleUpdateFee = (updatedFee: FeeRecord) => {
@@ -123,9 +135,9 @@ const App: React.FC = () => {
           />
         );
       case 'members':
-        return <MemberList members={members} onAdd={handleAddMember} onDelete={handleDeleteMember} />;
+        return <MemberList members={members} onAdd={handleAddMember} onUpdate={handleUpdateMember} onDelete={handleDeleteMember} />;
       case 'scores':
-        return <ScoringBoard scores={scores} members={members} outings={outings} onAdd={handleAddScore} />;
+        return <ScoringBoard scores={scores} members={members} outings={outings} onAdd={handleAddScore} onUpdate={handleUpdateScore} onDelete={handleDeleteScore} />;
       case 'ai-caddy':
         return <AICaddy />;
       case 'fees':

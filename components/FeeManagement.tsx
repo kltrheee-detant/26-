@@ -24,6 +24,15 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
   const [amount, setAmount] = useState('50000');
   const [memo, setMemo] = useState('');
 
+  const formatNumber = (num: string | number) => {
+    const value = num.toString().replace(/\D/g, '');
+    return value ? Number(value).toLocaleString() : '';
+  };
+
+  const parseNumber = (str: string) => {
+    return str.replace(/,/g, '');
+  };
+
   const filteredFees = fees.filter(fee => {
     const member = members.find(m => m.id === fee.memberId);
     const matchesSearch = 
@@ -43,13 +52,14 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
       id: Date.now().toString(),
       memberId,
       purpose,
-      amount: parseInt(amount),
+      amount: parseInt(parseNumber(amount)),
       date: new Date().toISOString().split('T')[0],
       status: 'unpaid',
       memo: memo.trim() || undefined
     });
 
     setMemberId('');
+    setAmount('50000');
     setMemo('');
     setShowModal(false);
   };
@@ -65,7 +75,6 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
   const totalCollected = fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + f.amount, 0);
   const totalUnpaid = fees.filter(f => f.status === 'unpaid').reduce((sum, f) => sum + f.amount, 0);
 
-  // 멤버별 납부 합계 계산
   const getMemberPaidTotal = (mid: string) => {
     return fees
       .filter(f => f.memberId === mid && f.status === 'paid')
@@ -277,14 +286,20 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">금액 (원)</label>
-                  <input 
-                    required
-                    type="number" 
-                    value={amount}
-                    onChange={e => setAmount(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold" 
-                    step="1000"
-                  />
+                  <div className="relative">
+                    <input 
+                      required
+                      type="text" 
+                      inputMode="numeric"
+                      value={formatNumber(amount)}
+                      onChange={e => setAmount(parseNumber(e.target.value))}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold pr-8" 
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">원</span>
+                  </div>
+                  <div className="mt-1 text-[10px] text-emerald-600 font-bold px-1">
+                    {amount ? `${Number(amount).toLocaleString()} 원` : ''}
+                  </div>
                 </div>
               </div>
               <div>
@@ -309,7 +324,6 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
         </div>
       )}
 
-      {/* 회비 내역 수정 모달 */}
       {editingFee && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
@@ -339,14 +353,17 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">금액 (원)</label>
-                  <input 
-                    required
-                    type="number" 
-                    value={editingFee.amount}
-                    onChange={e => setEditingFee({...editingFee, amount: parseInt(e.target.value)})}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-emerald-600" 
-                    step="1000"
-                  />
+                  <div className="relative">
+                    <input 
+                      required
+                      type="text" 
+                      inputMode="numeric"
+                      value={formatNumber(editingFee.amount)}
+                      onChange={e => setEditingFee({...editingFee, amount: parseInt(parseNumber(e.target.value)) || 0})}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-emerald-600 pr-8" 
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">원</span>
+                  </div>
                 </div>
               </div>
               <div>

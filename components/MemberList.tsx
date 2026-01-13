@@ -1,39 +1,80 @@
 
 import React, { useState } from 'react';
 import { Member } from '../types.ts';
-import { UserPlus, Search, Trash2, X, Wallet, Tag } from 'lucide-react';
+import { UserPlus, Search, Trash2, X, Wallet, Tag, Edit3 } from 'lucide-react';
 
 interface Props {
   members: Member[];
   onAdd: (member: Member) => void;
+  onUpdate: (member: Member) => void;
   onDelete: (id: string) => void;
 }
 
-const MemberList: React.FC<Props> = ({ members, onAdd, onDelete }) => {
+const MemberList: React.FC<Props> = ({ members, onAdd, onUpdate, onDelete }) => {
   const [showModal, setShowModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
   const [handicap, setHandicap] = useState('18');
   const [annualFee, setAnnualFee] = useState('500000');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    
-    onAdd({
-      id: Date.now().toString(),
-      name,
-      nickname: nickname.trim() || undefined,
-      handicap: parseInt(handicap),
-      annualFeeTarget: parseInt(annualFee),
-      avatar: `https://picsum.photos/seed/${name}/100`
-    });
-    
+  const formatNumber = (num: string | number) => {
+    const value = num.toString().replace(/\D/g, '');
+    return value ? Number(value).toLocaleString() : '';
+  };
+
+  const parseNumber = (str: string) => {
+    return str.replace(/,/g, '');
+  };
+
+  const resetForm = () => {
     setName('');
     setNickname('');
     setHandicap('18');
     setAnnualFee('500000');
+    setEditingMember(null);
+  };
+
+  const openAddModal = () => {
+    resetForm();
+    setShowModal(true);
+  };
+
+  const openEditModal = (member: Member) => {
+    setEditingMember(member);
+    setName(member.name);
+    setNickname(member.nickname || '');
+    setHandicap(member.handicap.toString());
+    setAnnualFee(member.annualFeeTarget.toString());
+    setShowModal(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    
+    if (editingMember) {
+      onUpdate({
+        ...editingMember,
+        name,
+        nickname: nickname.trim() || undefined,
+        handicap: parseInt(handicap),
+        annualFeeTarget: parseInt(parseNumber(annualFee)),
+      });
+    } else {
+      onAdd({
+        id: Date.now().toString(),
+        name,
+        nickname: nickname.trim() || undefined,
+        handicap: parseInt(handicap),
+        annualFeeTarget: parseInt(parseNumber(annualFee)),
+        avatar: `https://picsum.photos/seed/${name}/100`
+      });
+    }
+    
+    resetForm();
     setShowModal(false);
   };
 
@@ -50,7 +91,7 @@ const MemberList: React.FC<Props> = ({ members, onAdd, onDelete }) => {
           <p className="text-slate-500">회원들의 닉네임과 개별 연회비 기준을 관리하세요.</p>
         </div>
         <button 
-          onClick={() => setShowModal(true)}
+          onClick={openAddModal}
           className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
         >
           <UserPlus size={18} />
@@ -81,7 +122,7 @@ const MemberList: React.FC<Props> = ({ members, onAdd, onDelete }) => {
                 <th className="px-6 py-4">성명 (닉네임)</th>
                 <th className="px-6 py-4">핸디캡</th>
                 <th className="px-6 py-4">책정 연회비</th>
-                <th className="px-6 py-4 text-right">삭제</th>
+                <th className="px-6 py-4 text-right">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -115,23 +156,25 @@ const MemberList: React.FC<Props> = ({ members, onAdd, onDelete }) => {
                     </div>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button 
-                      onClick={() => onDelete(member.id)}
-                      className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                      title="멤버 삭제"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button 
+                        onClick={() => openEditModal(member)}
+                        className="p-2 text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                        title="정보 수정"
+                      >
+                        <Edit3 size={18} />
+                      </button>
+                      <button 
+                        onClick={() => onDelete(member.id)}
+                        className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                        title="멤버 삭제"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
-              {filteredMembers.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic text-sm">
-                    검색 결과가 없습니다.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -141,7 +184,7 @@ const MemberList: React.FC<Props> = ({ members, onAdd, onDelete }) => {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-xl font-bold text-slate-800">새 멤버 추가</h3>
+              <h3 className="text-xl font-bold text-slate-800">{editingMember ? '멤버 정보 수정' : '새 멤버 추가'}</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
             </div>
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -186,21 +229,24 @@ const MemberList: React.FC<Props> = ({ members, onAdd, onDelete }) => {
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">년회비 목표 (원)</label>
-                  <input 
-                    required
-                    type="number" 
-                    value={annualFee}
-                    onChange={e => setAnnualFee(e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-bold text-emerald-600" 
-                    step="10000"
-                  />
+                  <div className="relative">
+                    <input 
+                      required
+                      type="text" 
+                      inputMode="numeric"
+                      value={formatNumber(annualFee)}
+                      onChange={e => setAnnualFee(parseNumber(e.target.value))}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-bold text-emerald-600 pr-8" 
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">원</span>
+                  </div>
                 </div>
               </div>
               <button 
                 type="submit" 
-                className="w-full py-4 text-sm font-black text-white bg-emerald-600 hover:bg-emerald-700 rounded-2xl transition-all shadow-lg shadow-emerald-900/10 mt-2"
+                className={`w-full py-4 text-sm font-black text-white rounded-2xl transition-all shadow-lg mt-2 ${editingMember ? 'bg-blue-600 hover:bg-blue-700 shadow-blue-900/10' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/10'}`}
               >
-                멤버 등록 완료
+                {editingMember ? '수정 완료' : '멤버 등록 완료'}
               </button>
             </form>
           </div>
