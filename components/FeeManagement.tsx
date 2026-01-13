@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { FeeRecord, Member } from '../types.ts';
-import { Wallet, Search, Filter, CheckCircle2, XCircle, Plus, Calendar, X, Target, Info, Edit3 } from 'lucide-react';
+import { Wallet, Search, Filter, CheckCircle2, XCircle, Plus, Calendar, X, Target, Info, Edit3, Trash2, FileText } from 'lucide-react';
 
 interface Props {
   fees: FeeRecord[];
@@ -9,9 +9,10 @@ interface Props {
   onToggleStatus: (feeId: string) => void;
   onAdd: (fee: FeeRecord) => void;
   onUpdate: (fee: FeeRecord) => void;
+  onDelete: (id: string) => void;
 }
 
-const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, onUpdate }) => {
+const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, onUpdate, onDelete }) => {
   const [filter, setFilter] = useState<'all' | 'paid' | 'unpaid'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -21,10 +22,15 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
   const [memberId, setMemberId] = useState('');
   const [purpose, setPurpose] = useState('정기회비');
   const [amount, setAmount] = useState('50000');
+  const [memo, setMemo] = useState('');
 
   const filteredFees = fees.filter(fee => {
     const member = members.find(m => m.id === fee.memberId);
-    const matchesSearch = member?.name.includes(searchTerm) || member?.nickname?.includes(searchTerm) || fee.purpose.includes(searchTerm);
+    const matchesSearch = 
+      member?.name.includes(searchTerm) || 
+      member?.nickname?.includes(searchTerm) || 
+      fee.purpose.includes(searchTerm) ||
+      (fee.memo && fee.memo.includes(searchTerm));
     const matchesFilter = filter === 'all' || fee.status === filter;
     return matchesSearch && matchesFilter;
   });
@@ -39,10 +45,12 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
       purpose,
       amount: parseInt(amount),
       date: new Date().toISOString().split('T')[0],
-      status: 'unpaid'
+      status: 'unpaid',
+      memo: memo.trim() || undefined
     });
 
     setMemberId('');
+    setMemo('');
     setShowModal(false);
   };
 
@@ -69,7 +77,7 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">회비 및 납부 현황</h2>
-          <p className="text-slate-500">회원별 닉네임과 연회비 목표 대비 납부 현황을 관리합니다.</p>
+          <p className="text-slate-500">회원별 납부 항목(회비/찬조/기타) 및 상세 메모를 관리합니다.</p>
         </div>
         <button 
           onClick={() => setShowModal(true)}
@@ -115,7 +123,7 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input 
               type="text" 
-              placeholder="이름 또는 닉네임 검색..." 
+              placeholder="이름, 닉네임, 메모 검색..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full md:w-64 transition-all"
@@ -129,7 +137,7 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
               <tr className="bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100">
                 <th className="px-6 py-4">회원명 (닉네임)</th>
                 <th className="px-6 py-4">년회비 납부 현황</th>
-                <th className="px-6 py-4">상세 항목</th>
+                <th className="px-6 py-4">항목 및 메모</th>
                 <th className="px-6 py-4">금액</th>
                 <th className="px-6 py-4">상태</th>
                 <th className="px-6 py-4 text-right">관리</th>
@@ -171,8 +179,16 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-slate-600 font-medium">{fee.purpose}</div>
-                      <div className="text-[10px] text-slate-400 font-bold">{fee.date}</div>
+                      <div className="flex items-center gap-1 text-sm text-slate-600 font-bold">
+                        {fee.purpose === '찬조' ? <Target size={12} className="text-amber-500" /> : <Wallet size={12} className="text-emerald-500" />}
+                        {fee.purpose}
+                      </div>
+                      {fee.memo && (
+                        <div className="text-[11px] text-slate-400 font-medium italic mt-0.5 max-w-[150px] truncate" title={fee.memo}>
+                          {fee.memo}
+                        </div>
+                      )}
+                      <div className="text-[10px] text-slate-400 font-bold mt-1 opacity-60">{fee.date}</div>
                     </td>
                     <td className="px-6 py-4 text-sm font-black text-slate-800">{fee.amount.toLocaleString()}원</td>
                     <td className="px-6 py-4">
@@ -184,17 +200,24 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1 md:gap-2">
                         <button 
                           onClick={() => setEditingFee(fee)}
-                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                          title="금액 수정"
+                          className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                          title="수정"
                         >
                           <Edit3 size={16} />
                         </button>
                         <button 
+                          onClick={() => onDelete(fee.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                          title="삭제"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                        <button 
                           onClick={() => onToggleStatus(fee.id)}
-                          className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all shadow-sm ${
+                          className={`text-xs font-bold px-2.5 py-1.5 rounded-xl border transition-all shadow-sm ${
                             fee.status === 'paid' 
                             ? 'bg-white border-slate-200 text-slate-400 hover:text-slate-600' 
                             : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-600 hover:text-white hover:border-emerald-600'
@@ -239,26 +262,40 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">항목명</label>
-                <input 
-                  required
-                  type="text" 
-                  value={purpose}
-                  onChange={e => setPurpose(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" 
-                  placeholder="예: 정기회비, 라운딩 참가비"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">항목명</label>
+                  <select 
+                    value={purpose}
+                    onChange={e => setPurpose(e.target.value)}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-bold"
+                  >
+                    <option value="정기회비">정기회비</option>
+                    <option value="찬조">찬조</option>
+                    <option value="기타">기타</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">금액 (원)</label>
+                  <input 
+                    required
+                    type="number" 
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold" 
+                    step="1000"
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">금액 (원)</label>
-                <input 
-                  required
-                  type="number" 
-                  value={amount}
-                  onChange={e => setAmount(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold" 
-                  step="1000"
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                  <FileText size={10} /> 메모 (선택사항)
+                </label>
+                <textarea 
+                  value={memo}
+                  onChange={e => setMemo(e.target.value)}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-xs font-medium h-20 resize-none" 
+                  placeholder="예: 6월 포천힐스 라운딩 참가비 정산분"
                 />
               </div>
               <button 
@@ -287,25 +324,39 @@ const FeeManagement: React.FC<Props> = ({ fees, members, onToggleStatus, onAdd, 
                   {members.find(m => m.id === editingFee.memberId)?.name} {members.find(m => m.id === editingFee.memberId)?.nickname && `(${members.find(m => m.id === editingFee.memberId)?.nickname})`}
                 </div>
               </div>
-              <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">항목명</label>
-                <input 
-                  required
-                  type="text" 
-                  value={editingFee.purpose}
-                  onChange={e => setEditingFee({...editingFee, purpose: e.target.value})}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" 
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">항목명</label>
+                  <select 
+                    value={editingFee.purpose}
+                    onChange={e => setEditingFee({...editingFee, purpose: e.target.value})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-bold"
+                  >
+                    <option value="정기회비">정기회비</option>
+                    <option value="찬조">찬조</option>
+                    <option value="기타">기타</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">금액 (원)</label>
+                  <input 
+                    required
+                    type="number" 
+                    value={editingFee.amount}
+                    onChange={e => setEditingFee({...editingFee, amount: parseInt(e.target.value)})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-emerald-600" 
+                    step="1000"
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">금액 (원)</label>
-                <input 
-                  required
-                  type="number" 
-                  value={editingFee.amount}
-                  onChange={e => setEditingFee({...editingFee, amount: parseInt(e.target.value)})}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-emerald-600" 
-                  step="1000"
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                  <FileText size={10} /> 메모
+                </label>
+                <textarea 
+                  value={editingFee.memo || ''}
+                  onChange={e => setEditingFee({...editingFee, memo: e.target.value})}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-xs font-medium h-20 resize-none" 
                 />
               </div>
               <div className="flex gap-3 mt-4">

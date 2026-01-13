@@ -34,8 +34,9 @@ export interface FeeRecord {
   memberId: string;
   amount: number;
   date: string;
-  purpose: string; // 예: "6월 정기회비", "라운딩 참가비"
+  purpose: string; // 예: "정기회비", "찬조", "기타"
   status: 'paid' | 'unpaid';
+  memo?: string; // 메모 기능 추가
 }
 
 export type View = 'dashboard' | 'outings' | 'scores' | 'members' | 'ai-caddy' | 'fees' | 'settings';
