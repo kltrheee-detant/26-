@@ -1,0 +1,7 @@
+{
+  "name": "동물원: 골프 커뮤니티 허브",
+  "description": "라운딩 일정 관리, 스코어 트래킹, AI 골프 조언 및 회비 관리를 위한 종합 골프 모임 관리 앱입니다.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
