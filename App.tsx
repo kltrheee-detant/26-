@@ -199,15 +199,7 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => {
-                setActiveView('outings');
-              }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors shadow-sm"
-            >
-              <Plus size={18} />
-              <span className="hidden sm:inline">새 라운딩</span>
-            </button>
+            {/* 우측 상단 새 라운딩 버튼 제거됨 */}
           </div>
         </header>
 

@@ -22,7 +22,7 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
   // Input State
   const [memberId, setMemberId] = useState('');
   const [outingId, setOutingId] = useState('');
-  const [scoreDate, setScoreDate] = useState(new Date().toISOString().split('T')[0]);
+  const [scoreDate, setScoreDate] = useState('');
   const [scoreVal, setScoreVal] = useState('80');
   const [scoreImage, setScoreImage] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -32,7 +32,17 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
   const resetForm = () => {
     setMemberId('');
     setOutingId('');
-    setScoreDate(new Date().toISOString().split('T')[0]);
+    // 현재 리더보드에서 보고 있는 년/월의 1일로 기본값 설정 (오늘 날짜가 해당 월이 아닐 경우를 대비)
+    const now = new Date();
+    const isCurrentMonthView = now.getFullYear() === selectedYear && (now.getMonth() + 1) === selectedMonth;
+    
+    if (isCurrentMonthView) {
+      setScoreDate(now.toISOString().split('T')[0]);
+    } else {
+      const monthStr = selectedMonth < 10 ? `0${selectedMonth}` : selectedMonth;
+      setScoreDate(`${selectedYear}-${monthStr}-01`);
+    }
+    
     setScoreVal('80');
     setScoreImage(null);
     setEditingScore(null);
@@ -79,7 +89,7 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
         memberId,
         outingId,
         totalScore: parseInt(scoreVal),
-        date: scoreDate, // 폼에서 선택한 날짜 사용
+        date: scoreDate,
         imageUrl: scoreImage || undefined
       });
     } else {
@@ -88,7 +98,7 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
         memberId,
         outingId,
         totalScore: parseInt(scoreVal),
-        date: scoreDate, // 폼에서 선택한 날짜 사용
+        date: scoreDate,
         imageUrl: scoreImage || undefined
       });
     }
