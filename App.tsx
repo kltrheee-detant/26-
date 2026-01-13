@@ -75,13 +75,26 @@ const App: React.FC = () => {
   const handleToggleFeeStatus = (feeId: string) => {
     setFees(prev => prev.map(f => f.id === feeId ? { ...f, status: f.status === 'paid' ? 'unpaid' : 'paid' } : f));
   };
+  
+  const handleToggleParticipant = (outingId: string, memberId: string) => {
+    setOutings(prev => prev.map(o => {
+      if (o.id !== outingId) return o;
+      const isAlreadyIn = o.participants.includes(memberId);
+      return {
+        ...o,
+        participants: isAlreadyIn 
+          ? o.participants.filter(id => id !== memberId)
+          : [...o.participants, memberId]
+      };
+    }));
+  };
 
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
         return <Dashboard outings={outings} scores={scores} members={members} fees={fees} />;
       case 'outings':
-        return <OutingList outings={outings} onAdd={handleAddOuting} members={members} />;
+        return <OutingList outings={outings} onAdd={handleAddOuting} onToggleParticipant={handleToggleParticipant} members={members} />;
       case 'members':
         return <MemberList members={members} onAdd={handleAddMember} onDelete={handleDeleteMember} />;
       case 'scores':
