@@ -2,7 +2,11 @@
 import { GoogleGenAI } from "@google/genai";
 import { POCHEON_HILLS_DATA } from "./pocheonHillsData.ts";
 
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+const getAI = () => {
+  // process 객체가 정의되지 않은 환경에서도 에러가 나지 않도록 처리
+  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
+  return new GoogleGenAI({ apiKey: apiKey as string });
+};
 
 export const getGolfAdvice = async (query: string) => {
   const ai = getAI();

@@ -1,5 +1,5 @@
 
-import { Member, Outing, RoundScore, FeeRecord } from '../types';
+import { Member, Outing, RoundScore, FeeRecord } from '../types.ts';
 
 const STORAGE_KEYS = {
   MEMBERS: 'zoo_members',
