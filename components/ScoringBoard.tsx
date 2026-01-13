@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { RoundScore, Member, Outing } from '../types.ts';
 import { Trophy, TrendingDown, Target, Plus, X, Camera, Image as ImageIcon, Calendar, ChevronLeft, ChevronRight, Eye, Edit3, Trash2 } from 'lucide-react';
 
@@ -22,6 +22,7 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
   // Input State
   const [memberId, setMemberId] = useState('');
   const [outingId, setOutingId] = useState('');
+  const [scoreDate, setScoreDate] = useState(new Date().toISOString().split('T')[0]);
   const [scoreVal, setScoreVal] = useState('80');
   const [scoreImage, setScoreImage] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -31,10 +32,21 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
   const resetForm = () => {
     setMemberId('');
     setOutingId('');
+    setScoreDate(new Date().toISOString().split('T')[0]);
     setScoreVal('80');
     setScoreImage(null);
     setEditingScore(null);
   };
+
+  // 라운딩 일정 선택 시 날짜 자동 업데이트
+  useEffect(() => {
+    if (outingId && outingId !== 'external') {
+      const selectedOuting = outings.find(o => o.id === outingId);
+      if (selectedOuting) {
+        setScoreDate(selectedOuting.date);
+      }
+    }
+  }, [outingId, outings]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -51,6 +63,7 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
     setEditingScore(score);
     setMemberId(score.memberId);
     setOutingId(score.outingId);
+    setScoreDate(score.date);
     setScoreVal(score.totalScore.toString());
     setScoreImage(score.imageUrl || null);
     setShowModal(true);
@@ -66,6 +79,7 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
         memberId,
         outingId,
         totalScore: parseInt(scoreVal),
+        date: scoreDate, // 폼에서 선택한 날짜 사용
         imageUrl: scoreImage || undefined
       });
     } else {
@@ -74,7 +88,7 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
         memberId,
         outingId,
         totalScore: parseInt(scoreVal),
-        date: new Date().toISOString().split('T')[0],
+        date: scoreDate, // 폼에서 선택한 날짜 사용
         imageUrl: scoreImage || undefined
       });
     }
@@ -282,7 +296,6 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
                     <Eye className="text-white" size={32} />
                   </div>
                   
-                  {/* 스코어 갤러리 관리 버튼 (항상 표시되거나 호버 시 강조) */}
                   <div className="absolute top-4 right-4 flex gap-2">
                     <button 
                       onClick={(e) => { e.stopPropagation(); openEditModal(score); }}
@@ -373,8 +386,18 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
                     </select>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">라운딩 날짜</label>
+                  <input 
+                    required
+                    type="date" 
+                    value={scoreDate}
+                    onChange={e => setScoreDate(e.target.value)}
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-bold shadow-inner" 
+                  />
+                </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">최종 타수 (Gross)</label>
                   <input 
@@ -386,8 +409,10 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
                     min="50" max="150"
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">사진 변경</label>
+              </div>
+
+              <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">스코어카드 사진</label>
                   <button 
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
@@ -406,7 +431,6 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
                     onChange={handleFileChange}
                   />
                 </div>
-              </div>
 
               {scoreImage && (
                 <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-slate-200 shadow-lg group">
