@@ -14,6 +14,8 @@ export interface Outing {
   date: string;
   courseName: string;
   location: string;
+  lunchLocation?: string; // 점심 장소 추가
+  dinnerLocation?: string; // 저녁 장소 추가
   participants: string[]; // Member IDs
   status: 'upcoming' | 'completed' | 'cancelled';
 }

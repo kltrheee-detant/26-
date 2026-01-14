@@ -127,7 +127,7 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard outings={outings} scores={scores} members={members} fees={fees} initialCarryover={initialCarryover} />;
+        return <Dashboard outings={outings} scores={scores} members={members} fees={fees} initialCarryover={initialCarryover} onNavigateOutings={() => setActiveView('outings')} />;
       case 'outings':
         return (
           <OutingList 
@@ -161,7 +161,7 @@ const App: React.FC = () => {
       case 'settings':
         return <SettingsView onReload={() => window.location.reload()} />;
       default:
-        return <Dashboard outings={outings} scores={scores} members={members} fees={fees} initialCarryover={initialCarryover} />;
+        return <Dashboard outings={outings} scores={scores} members={members} fees={fees} initialCarryover={initialCarryover} onNavigateOutings={() => setActiveView('outings')} />;
     }
   };
 
@@ -179,7 +179,7 @@ const App: React.FC = () => {
         </div>
         
         <div className="space-y-2 flex-1">
-          <NavItem icon={<LayoutDashboard size={20} />} label="대시보드" active={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
+          <NavItem icon={<LayoutDashboard size={20} />} label="게시판" active={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
           <NavItem icon={<Calendar size={20} />} label="라운딩 일정" active={activeView === 'outings'} onClick={() => setActiveView('outings')} />
           <NavItem icon={<Users size={20} />} label="멤버 관리" active={activeView === 'members'} onClick={() => setActiveView('members')} />
           <NavItem icon={<Trophy size={20} />} label="스코어보드" active={activeView === 'scores'} onClick={() => setActiveView('scores')} />

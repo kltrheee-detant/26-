@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Outing, Member } from '../types.ts';
-import { Calendar, MapPin, Plus, MoreHorizontal, Filter, X, Check, Users, Edit3, Trash2 } from 'lucide-react';
+import { Calendar, MapPin, Plus, MoreHorizontal, Filter, X, Check, Users, Edit3, Trash2, Utensils, Coffee } from 'lucide-react';
 
 interface Props {
   outings: Outing[];
@@ -22,7 +22,9 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
     title: '',
     date: '',
     courseName: '',
-    location: ''
+    location: '',
+    lunchLocation: '',
+    dinnerLocation: ''
   });
 
   const handleAddSubmit = (e: React.FormEvent) => {
@@ -34,7 +36,7 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
       status: 'upcoming'
     } as Outing);
     setShowAddModal(false);
-    setNewOuting({ title: '', date: '', courseName: '', location: '' });
+    setNewOuting({ title: '', date: '', courseName: '', location: '', lunchLocation: '', dinnerLocation: '' });
   };
 
   const handleUpdateSubmit = (e: React.FormEvent) => {
@@ -52,7 +54,7 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">라운딩 일정</h2>
-          <p className="text-slate-500">다가오는 라운딩을 계획하고 참여 멤버를 관리하세요.</p>
+          <p className="text-slate-500">다가오는 라운딩을 계획하고 식사 장소 및 참여 멤버를 관리하세요.</p>
         </div>
         <div className="flex gap-3">
           <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors shadow-sm">
@@ -75,7 +77,6 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
             <div className="h-32 bg-emerald-900 relative overflow-hidden">
               <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/golf/800/400')] bg-cover bg-center opacity-40 mix-blend-overlay group-hover:scale-110 transition-transform duration-700"></div>
               
-              {/* 카드 더보기 메뉴 */}
               <div className="absolute top-4 right-4 z-20">
                 <button 
                   onClick={() => setActiveMenuId(activeMenuId === outing.id ? null : outing.id)}
@@ -128,10 +129,24 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
                   <Calendar size={16} className="text-slate-400" />
                   <span>{new Date(outing.date).toLocaleDateString('ko-KR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin size={16} className="text-slate-400" />
-                  <span>{outing.location}</span>
-                </div>
+                {(outing.lunchLocation || outing.dinnerLocation) && (
+                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                    {outing.lunchLocation && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <Coffee size={14} className="text-amber-500" />
+                        <span className="font-bold text-slate-400 mr-1">점심:</span>
+                        <span className="text-slate-700 truncate">{outing.lunchLocation}</span>
+                      </div>
+                    )}
+                    {outing.dinnerLocation && (
+                      <div className="flex items-center gap-2 text-xs">
+                        <Utensils size={14} className="text-emerald-500" />
+                        <span className="font-bold text-slate-400 mr-1">저녁:</span>
+                        <span className="text-slate-700 truncate">{outing.dinnerLocation}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
@@ -179,7 +194,7 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
               <h3 className="text-xl font-bold text-slate-800">새 라운딩 일정</h3>
               <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
             </div>
-            <form onSubmit={handleAddSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleAddSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto no-scrollbar">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">일정 제목</label>
                 <input 
@@ -225,7 +240,36 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
                   placeholder="예: 클럽 나인브릿지"
                 />
               </div>
-              <div className="flex gap-3 pt-4">
+
+              <div className="space-y-3 pt-2">
+                <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest border-b border-emerald-50 pb-1">식사 정보 (선택)</h4>
+                <div>
+                  <label className="flex items-center gap-1 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    <Coffee size={12} className="text-amber-500" /> 점심 식사 장소
+                  </label>
+                  <input 
+                    type="text" 
+                    value={newOuting.lunchLocation}
+                    onChange={e => setNewOuting({...newOuting, lunchLocation: e.target.value})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-xs" 
+                    placeholder="예: 클럽하우스 또는 근처 식당"
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-1 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    <Utensils size={12} className="text-emerald-500" /> 저녁 식사 장소
+                  </label>
+                  <input 
+                    type="text" 
+                    value={newOuting.dinnerLocation}
+                    onChange={e => setNewOuting({...newOuting, dinnerLocation: e.target.value})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-xs" 
+                    placeholder="예: 라운딩 후 뒤풀이 장소"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4 sticky bottom-0 bg-white">
                 <button 
                   type="button" 
                   onClick={() => setShowAddModal(false)}
@@ -253,7 +297,7 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
               <h3 className="text-xl font-bold text-slate-800">일정 정보 수정</h3>
               <button onClick={() => setEditingOuting(null)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
             </div>
-            <form onSubmit={handleUpdateSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleUpdateSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto no-scrollbar">
               <div>
                 <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">일정 제목</label>
                 <input 
@@ -296,7 +340,34 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-bold text-emerald-700" 
                 />
               </div>
-              <div className="flex gap-3 pt-4">
+
+              <div className="space-y-3 pt-2">
+                <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest border-b border-emerald-50 pb-1">식사 정보 (선택)</h4>
+                <div>
+                  <label className="flex items-center gap-1 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    <Coffee size={12} className="text-amber-500" /> 점심 식사 장소
+                  </label>
+                  <input 
+                    type="text" 
+                    value={editingOuting.lunchLocation || ''}
+                    onChange={e => setEditingOuting({...editingOuting, lunchLocation: e.target.value})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-xs" 
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-1 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    <Utensils size={12} className="text-emerald-500" /> 저녁 식사 장소
+                  </label>
+                  <input 
+                    type="text" 
+                    value={editingOuting.dinnerLocation || ''}
+                    onChange={e => setEditingOuting({...editingOuting, dinnerLocation: e.target.value})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-xs" 
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4 sticky bottom-0 bg-white">
                 <button 
                   type="button" 
                   onClick={() => setEditingOuting(null)}
