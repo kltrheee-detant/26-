@@ -11,7 +11,14 @@ import {
   Wallet,
   CloudCheck,
   RefreshCw,
-  DownloadCloud
+  DownloadCloud,
+  UserPlus,
+  QrCode,
+  X,
+  Share2,
+  Copy,
+  Check,
+  Smartphone
 } from 'lucide-react';
 import { View, Outing, Member, RoundScore, FeeRecord } from './types.ts';
 import Dashboard from './components/Dashboard.tsx';
@@ -27,7 +34,9 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
   const [showImportPrompt, setShowImportPrompt] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [pendingData, setPendingData] = useState<string | null>(null);
+  const [appLinkCopied, setAppLinkCopied] = useState(false);
   
   const [members, setMembers] = useState<Member[]>([]);
   const [outings, setOutings] = useState<Outing[]>([]);
@@ -35,7 +44,6 @@ const App: React.FC = () => {
   const [fees, setFees] = useState<FeeRecord[]>([]);
   const [initialCarryover, setInitialCarryover] = useState(0);
 
-  // 데이터 로드 함수
   const loadAllData = () => {
     const savedMembers = storageService.loadMembers();
     const savedOutings = storageService.loadOutings();
@@ -77,14 +85,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     loadAllData();
-
-    // URL 해시에서 공유 데이터 확인
     const hash = window.location.hash;
     if (hash.startsWith('#import=')) {
       const data = hash.replace('#import=', '');
       setPendingData(data);
       setShowImportPrompt(true);
-      // 주소창 깔끔하게 비우기
       window.history.replaceState(null, '', window.location.pathname);
     }
   }, []);
@@ -101,6 +106,13 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [members, outings, scores, fees, initialCarryover]);
 
+  const handleCopyAppUrl = () => {
+    const appUrl = window.location.origin + window.location.pathname;
+    navigator.clipboard.writeText(appUrl);
+    setAppLinkCopied(true);
+    setTimeout(() => setAppLinkCopied(false), 2000);
+  };
+
   const handleConfirmImport = () => {
     if (pendingData && storageService.importFullData(pendingData)) {
       loadAllData();
@@ -110,81 +122,62 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAddOuting = (newOuting: Outing) => setOutings(prev => [newOuting, ...prev]);
-  const handleUpdateOuting = (updatedOuting: Outing) => {
-    setOutings(prev => prev.map(o => o.id === updatedOuting.id ? updatedOuting : o));
-  };
-  const handleDeleteOuting = (id: string) => {
-    if (window.confirm('이 라운딩 일정을 삭제하시겠습니까?')) {
-      setOutings(prev => prev.filter(o => o.id !== id));
-    }
-  };
-
-  const handleAddMember = (newMember: Member) => setMembers(prev => [...prev, newMember]);
-  const handleUpdateMember = (updatedMember: Member) => {
-    setMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
-  };
-  const handleDeleteMember = (memberId: string) => {
-    if (window.confirm('이 멤버를 정말 삭제하시겠습니까? 관련 기록에서 해당 멤버의 정보가 표시되지 않을 수 있습니다.')) {
-      setMembers(prev => prev.filter(m => m.id !== memberId));
-    }
-  };
-  
-  const handleAddScore = (newScore: RoundScore) => setScores(prev => [newScore, ...prev]);
-  const handleUpdateScore = (updatedScore: RoundScore) => {
-    setScores(prev => prev.map(s => s.id === updatedScore.id ? updatedScore : s));
-  };
-  const handleDeleteScore = (id: string) => {
-    if (window.confirm('이 스코어 기록을 삭제하시겠습니까?')) {
-      setScores(prev => prev.filter(s => s.id !== id));
-    }
-  };
-  
-  const handleAddFee = (newFee: FeeRecord) => setFees(prev => [newFee, ...prev]);
-  const handleUpdateFee = (updatedFee: FeeRecord) => {
-    setFees(prev => prev.map(f => f.id === updatedFee.id ? updatedFee : f));
-  };
-  const handleDeleteFee = (id: string) => {
-    if (window.confirm('이 회비 내역을 삭제하시겠습니까?')) {
-      setFees(prev => prev.filter(f => f.id !== id));
-    }
-  };
-  const handleToggleFeeStatus = (feeId: string) => {
-    setFees(prev => prev.map(f => f.id === feeId ? { ...f, status: f.status === 'paid' ? 'unpaid' : 'paid' } : f));
-  };
-  
-  const handleToggleParticipant = (outingId: string, memberId: string) => {
-    setOutings(prev => prev.map(o => {
-      if (o.id !== outingId) return o;
-      const isAlreadyIn = o.participants.includes(memberId);
-      return {
-        ...o,
-        participants: isAlreadyIn 
-          ? o.participants.filter(id => id !== memberId)
-          : [...o.participants, memberId]
-      };
-    }));
-  };
-
+  // Define renderView to map current state to its corresponding component
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard outings={outings} scores={scores} members={members} fees={fees} initialCarryover={initialCarryover} onNavigateOutings={() => setActiveView('outings')} />;
+        return (
+          <Dashboard 
+            outings={outings} 
+            scores={scores} 
+            members={members} 
+            fees={fees} 
+            initialCarryover={initialCarryover} 
+            onNavigateOutings={() => setActiveView('outings')}
+          />
+        );
       case 'outings':
         return (
           <OutingList 
             outings={outings} 
-            onAdd={handleAddOuting} 
-            onUpdate={handleUpdateOuting}
-            onDelete={handleDeleteOuting}
-            onToggleParticipant={handleToggleParticipant} 
             members={members} 
+            onAdd={(o) => setOutings([...outings, o])}
+            onUpdate={(updated) => setOutings(outings.map(o => o.id === updated.id ? updated : o))}
+            onDelete={(id) => setOutings(outings.filter(o => o.id !== id))}
+            onToggleParticipant={(outingId, memberId) => {
+              setOutings(outings.map(o => {
+                if (o.id === outingId) {
+                  const participants = o.participants || [];
+                  const newParticipants = participants.includes(memberId)
+                    ? participants.filter(id => id !== memberId)
+                    : [...participants, memberId];
+                  return { ...o, participants: newParticipants };
+                }
+                return o;
+              }));
+            }}
           />
         );
       case 'members':
-        return <MemberList members={members} onAdd={handleAddMember} onUpdate={handleUpdateMember} onDelete={handleDeleteMember} />;
+        return (
+          <MemberList 
+            members={members} 
+            onAdd={(m) => setMembers([...members, m])}
+            onUpdate={(updated) => setMembers(members.map(m => m.id === updated.id ? updated : m))}
+            onDelete={(id) => setMembers(members.filter(m => m.id !== id))}
+          />
+        );
       case 'scores':
-        return <ScoringBoard scores={scores} members={members} outings={outings} onAdd={handleAddScore} onUpdate={handleUpdateScore} onDelete={handleDeleteScore} />;
+        return (
+          <ScoringBoard 
+            scores={scores} 
+            members={members} 
+            outings={outings} 
+            onAdd={(s) => setScores([...scores, s])}
+            onUpdate={(updated) => setScores(scores.map(s => s.id === updated.id ? updated : s))}
+            onDelete={(id) => setScores(scores.filter(s => s.id !== id))}
+          />
+        );
       case 'ai-caddy':
         return <AICaddy />;
       case 'fees':
@@ -192,10 +185,12 @@ const App: React.FC = () => {
           <FeeManagement 
             fees={fees} 
             members={members} 
-            onToggleStatus={handleToggleFeeStatus} 
-            onAdd={handleAddFee} 
-            onUpdate={handleUpdateFee} 
-            onDelete={handleDeleteFee} 
+            onToggleStatus={(id) => {
+              setFees(fees.map(f => f.id === id ? { ...f, status: f.status === 'paid' ? 'unpaid' : 'paid' } : f));
+            }}
+            onAdd={(f) => setFees([...fees, f])}
+            onUpdate={(updated) => setFees(fees.map(f => f.id === updated.id ? updated : f))}
+            onDelete={(id) => setFees(fees.filter(f => f.id !== id))}
             initialCarryover={initialCarryover}
             onUpdateCarryover={setInitialCarryover}
           />
@@ -203,7 +198,7 @@ const App: React.FC = () => {
       case 'settings':
         return <SettingsView onReload={loadAllData} />;
       default:
-        return <Dashboard outings={outings} scores={scores} members={members} fees={fees} initialCarryover={initialCarryover} onNavigateOutings={() => setActiveView('outings')} />;
+        return <Dashboard outings={outings} scores={scores} members={members} fees={fees} initialCarryover={initialCarryover} />;
     }
   };
 
@@ -229,10 +224,17 @@ const App: React.FC = () => {
           <NavItem icon={<MessageSquare size={20} />} label="AI 캐디" active={activeView === 'ai-caddy'} onClick={() => setActiveView('ai-caddy')} />
         </div>
 
-        <div className="pt-6 border-t border-emerald-800">
+        <div className="pt-6 border-t border-emerald-800 space-y-2">
+           <button 
+             onClick={() => setShowInviteModal(true)}
+             className="w-full flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all text-emerald-300 font-bold text-sm"
+           >
+             <UserPlus size={20} />
+             <span>어플 멤버 초대</span>
+           </button>
            <button 
              onClick={() => setActiveView('settings')}
-             className={`w-full flex items-center gap-3 p-2 hover:bg-emerald-800/50 rounded-lg transition-colors ${activeView === 'settings' ? 'bg-emerald-800' : ''}`}
+             className={`w-full flex items-center gap-3 p-3 hover:bg-emerald-800/50 rounded-xl transition-colors ${activeView === 'settings' ? 'bg-emerald-800' : ''}`}
            >
              <Settings size={20} className="text-emerald-300" />
              <span className="font-medium">설정</span>
@@ -255,6 +257,12 @@ const App: React.FC = () => {
               {isSyncing ? '동기화 중...' : '클라우드 보호됨'}
             </div>
           </div>
+          <button 
+             onClick={() => setShowInviteModal(true)}
+             className="md:hidden flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-black border border-emerald-100"
+           >
+             <Share2 size={12} /> 초대
+           </button>
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -269,6 +277,79 @@ const App: React.FC = () => {
           <MobileNavItem icon={<Settings />} active={activeView === 'settings'} onClick={() => setActiveView('settings')} />
         </nav>
       </div>
+
+      {/* 초대 모달 */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-[3rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="p-8 text-center space-y-6">
+              <div className="flex justify-between items-start">
+                <div className="w-12"></div>
+                <div className="w-20 h-20 bg-emerald-100 text-emerald-700 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+                  <UserPlus size={40} strokeWidth={2.5} />
+                </div>
+                <button onClick={() => setShowInviteModal(false)} className="p-2 text-slate-300 hover:text-slate-500 transition-colors">
+                  <X size={24} />
+                </button>
+              </div>
+              
+              <div>
+                <h3 className="text-2xl font-black text-slate-800 tracking-tight">멤버들을 초대하세요</h3>
+                <p className="text-sm text-slate-500 mt-2 font-medium">동물원 클럽의 새 멤버에게 어플 주소를 보냅니다.</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 text-left relative group">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block">어플 주소 (URL)</label>
+                  <div className="text-xs font-mono text-emerald-700 font-bold truncate pr-10">
+                    {window.location.origin + window.location.pathname}
+                  </div>
+                  <button 
+                    onClick={handleCopyAppUrl}
+                    className="absolute right-3 bottom-3 p-2 bg-white rounded-lg shadow-sm border border-slate-100 hover:bg-emerald-600 hover:text-white transition-all"
+                  >
+                    {appLinkCopied ? <Check size={16} /> : <Copy size={16} />}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button 
+                    onClick={handleCopyAppUrl}
+                    className="flex flex-col items-center gap-2 p-5 bg-emerald-50 text-emerald-700 rounded-3xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm group"
+                  >
+                    <Share2 size={24} />
+                    <span className="text-xs font-black">카톡 링크 전송</span>
+                  </button>
+                  <div className="flex flex-col items-center gap-2 p-5 bg-slate-50 text-slate-700 rounded-3xl border border-slate-200 relative overflow-hidden">
+                    <QrCode size={24} />
+                    <span className="text-xs font-black">QR 코드 공유</span>
+                    <div className="absolute inset-0 bg-slate-800/80 backdrop-blur-sm flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                       <span className="text-[10px] text-white font-bold">준비 중</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-5 bg-amber-50 rounded-3xl border border-amber-100 text-left flex gap-3">
+                  <Smartphone className="text-amber-600 shrink-0" size={24} />
+                  <div>
+                    <h4 className="text-xs font-black text-amber-800 mb-1">진짜 앱처럼 사용하기</h4>
+                    <p className="text-[10px] text-amber-700 leading-normal font-medium italic">
+                      "공유하기 > 홈 화면에 추가"를 누르면 휴대폰 바탕화면에 동물원 아이콘이 생깁니다!
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setShowInviteModal(false)}
+                className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-black transition-all shadow-lg"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 공유 링크 감지 팝업 */}
       {showImportPrompt && (

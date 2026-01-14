@@ -1,6 +1,7 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Outing, RoundScore, Member, FeeRecord } from '../types.ts';
+import { storageService } from '../services/storageService.ts';
 import { 
   XAxis, 
   YAxis, 
@@ -10,7 +11,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { Trophy, Calendar, Users, TrendingUp, ChevronRight, Clock, Wallet, ImageIcon, Bell, Utensils, Coffee, MapPin, ExternalLink, Target, Flag, UserPlus } from 'lucide-react';
+import { Trophy, Calendar, Users, TrendingUp, ChevronRight, Clock, Wallet, ImageIcon, Bell, Utensils, Coffee, MapPin, ExternalLink, Target, Flag, UserPlus, Share2, Check } from 'lucide-react';
 
 interface Props {
   outings: Outing[];
@@ -22,6 +23,8 @@ interface Props {
 }
 
 const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCarryover, onNavigateOutings }) => {
+  const [linkCopied, setLinkCopied] = useState(false);
+  
   const upcomingOutings = outings
     .filter(o => o.status === 'upcoming')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -49,6 +52,16 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
     }
   };
 
+  const handleShareFullData = () => {
+    const data = storageService.exportFullData();
+    const baseUrl = window.location.origin + window.location.pathname;
+    const shareUrl = `${baseUrl}#import=${data}`;
+    
+    navigator.clipboard.writeText(shareUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-5xl mx-auto pb-10">
       <header className="flex items-center justify-between">
@@ -69,12 +82,23 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
            <h3 className="text-sm font-black text-emerald-800 uppercase tracking-widest flex items-center gap-2">
              <Calendar size={16} /> 다음 라운딩 주요 공지
            </h3>
-           <button 
-             onClick={onNavigateOutings}
-             className="text-xs font-bold text-slate-400 hover:text-emerald-600 flex items-center gap-1 transition-colors"
-           >
-             전체 일정 <ChevronRight size={14} />
-           </button>
+           <div className="flex items-center gap-4">
+             {upcomingOutings.length > 0 && (
+               <button 
+                 onClick={handleShareFullData}
+                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black transition-all border shadow-sm ${linkCopied ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-white text-emerald-700 border-emerald-100 hover:bg-emerald-50'}`}
+               >
+                 {linkCopied ? <Check size={12} /> : <Share2 size={12} />}
+                 {linkCopied ? '데이터 링크 복사됨!' : '전체 데이터 링크 공유'}
+               </button>
+             )}
+             <button 
+               onClick={onNavigateOutings}
+               className="text-xs font-bold text-slate-400 hover:text-emerald-600 flex items-center gap-1 transition-colors"
+             >
+               전체 일정 <ChevronRight size={14} />
+             </button>
+           </div>
         </div>
         
         <div className="flex flex-col gap-4">

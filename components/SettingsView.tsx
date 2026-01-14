@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { storageService } from '../services/storageService.ts';
-import { Download, Upload, Share2, ShieldCheck, Database, Check, Copy, FileJson, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { Download, Upload, Share2, ShieldCheck, Database, Check, Copy, FileJson, Link as LinkIcon, ExternalLink, Smartphone, Apple, MoreVertical } from 'lucide-react';
 
 interface Props {
   onReload: () => void;
@@ -22,7 +22,6 @@ const SettingsView: React.FC<Props> = ({ onReload }) => {
 
   const handleExportLink = () => {
     const data = storageService.exportFullData();
-    // 현재 URL의 기본 주소 추출 (예: https://zoo-golf.vercel.app/)
     const baseUrl = window.location.origin + window.location.pathname;
     const shareUrl = `${baseUrl}#import=${data}`;
     
@@ -62,9 +61,48 @@ const SettingsView: React.FC<Props> = ({ onReload }) => {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">설정 및 데이터 공유</h2>
-        <p className="text-slate-500">클럽 데이터를 멤버들과 안전하게 주고받으세요.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">설정 및 어플 관리</h2>
+          <p className="text-slate-500">클럽 데이터를 멤버들과 안전하게 주고받고 설치하세요.</p>
+        </div>
+      </div>
+
+      {/* 스마트폰 어플로 설치하기 가이드 */}
+      <div className="bg-emerald-950 text-white rounded-[2.5rem] overflow-hidden shadow-2xl relative group">
+        <Smartphone className="absolute -right-10 -bottom-10 w-48 h-48 text-emerald-900 opacity-40 group-hover:rotate-12 transition-transform duration-700" />
+        <div className="p-8 relative z-10">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-3 bg-white/10 rounded-2xl">
+              <Smartphone size={24} className="text-emerald-400" />
+            </div>
+            <h3 className="text-lg font-black tracking-tight">스마트폰 어플로 만들기</h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white/5 backdrop-blur-md p-5 rounded-3xl border border-white/10">
+              <div className="flex items-center gap-2 mb-3 text-emerald-400">
+                <Apple size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">iOS (아이폰)</span>
+              </div>
+              <ol className="text-xs space-y-2 text-emerald-50/80 font-medium">
+                <li>1. 사파리(Safari)로 접속</li>
+                <li>2. 하단 <span className="text-white font-black">[공유 버튼]</span> 클릭</li>
+                <li>3. <span className="text-white font-black">'홈 화면에 추가'</span> 클릭</li>
+              </ol>
+            </div>
+            <div className="bg-white/5 backdrop-blur-md p-5 rounded-3xl border border-white/10">
+              <div className="flex items-center gap-2 mb-3 text-emerald-400">
+                <Smartphone size={16} /> <span className="text-[10px] font-black uppercase tracking-widest">Android (갤럭시)</span>
+              </div>
+              <ol className="text-xs space-y-2 text-emerald-50/80 font-medium">
+                <li>1. 크롬(Chrome)으로 접속</li>
+                <li>2. 우상단 <MoreVertical size={14} className="inline" /> 버튼 클릭</li>
+                <li>3. <span className="text-white font-black">'홈 화면에 추가'</span> 클릭</li>
+              </ol>
+            </div>
+          </div>
+          <p className="mt-6 text-[10px] text-emerald-500 font-bold uppercase tracking-tighter text-center">※ 설치하면 웹브라우저 주소창 없이 진짜 어플처럼 작동합니다.</p>
+        </div>
       </div>
 
       {/* 데이터 내보내기/공유 */}
@@ -165,20 +203,18 @@ const SettingsView: React.FC<Props> = ({ onReload }) => {
             {importStatus === 'success' ? <Check size={18} /> : <ExternalLink size={18} />}
             {importStatus === 'success' ? '데이터 동기화 완료!' : importStatus === 'error' ? '잘못된 형식입니다' : '코드 불러오기 실행'}
           </button>
-          <p className="text-[10px] text-center text-amber-600 font-bold uppercase tracking-tighter">※ 기존 데이터는 삭제되고 새로고침 됩니다.</p>
         </div>
       </div>
 
       {/* 보안/앱 정보 */}
-      <div className="bg-emerald-900 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden group">
-        <ShieldCheck className="absolute -right-6 -bottom-6 w-32 h-32 text-emerald-800 opacity-30" />
-        <div className="relative z-10 flex items-start gap-4">
-          <div className="p-3 bg-white/10 rounded-2xl shrink-0">
-            <ShieldCheck size={24} className="text-emerald-400" />
+      <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-emerald-50 rounded-2xl shrink-0">
+            <ShieldCheck size={24} className="text-emerald-600" />
           </div>
           <div>
-            <h4 className="font-bold text-lg leading-none mb-2">동물원 보안 데이터 교환</h4>
-            <p className="text-xs text-emerald-300 leading-relaxed font-medium">
+            <h4 className="font-bold text-slate-800 leading-none mb-2">동물원 보안 데이터 교환</h4>
+            <p className="text-xs text-slate-500 leading-relaxed font-medium">
               모든 데이터는 사용자 기기에 암호화되어 저장됩니다. AI 캐디 기능 사용 시를 제외하고는 외부 서버로 전송되지 않으며, 공유 기능을 통해 멤버들 간에만 수동으로 데이터를 주고받을 수 있습니다.
             </p>
           </div>
@@ -186,7 +222,7 @@ const SettingsView: React.FC<Props> = ({ onReload }) => {
       </div>
 
       <div className="text-center">
-        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Zoo Golf Community v1.1.0 • Build Stable</p>
+        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Zoo Golf Community v1.1.5 • Build Stable</p>
       </div>
     </div>
   );
