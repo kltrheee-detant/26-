@@ -19,7 +19,6 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   
-  // 게스트 입력용 로컬 상태
   const [guestInputs, setGuestInputs] = useState<Record<number, string>>({});
 
   const [newOuting, setNewOuting] = useState<Partial<Outing>>({
@@ -38,9 +37,22 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
     groups: []
   });
 
+  // 시간을 12시간제(오전/오후)로 포맷팅하는 함수
+  const formatTime = (timeStr?: string) => {
+    if (!timeStr) return '';
+    try {
+      const [hour, minute] = timeStr.split(':');
+      const h = parseInt(hour);
+      const ampm = h < 12 ? '오전' : '오후';
+      const displayHour = h % 12 || 12;
+      return `${ampm} ${displayHour}:${minute}`;
+    } catch (e) {
+      return timeStr;
+    }
+  };
+
   const handleCopyNotice = (outing: Outing) => {
-    // 조별 명단 포맷팅 (정회원 + 게스트)
-    const groupsText = outing.groups && outing.groups.length > 0 
+    const groupsText = (outing.groups || []).length > 0 
       ? outing.groups.map(g => {
           const membersStr = (g.memberIds || []).map(mid => members.find(m => m.id === mid)?.name).filter(Boolean).join(', ');
           const guestsStr = (g.guests || []).join(', ');
@@ -58,11 +70,11 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
 ${groupsText}
 
 🍽 식사 안내
-🍱 점심: ${outing.lunchTime ? `[${outing.lunchTime}] ` : ''}${outing.lunchLocation || '미정'}
+🍱 점심: ${outing.lunchTime ? `[${formatTime(outing.lunchTime)}] ` : ''}${outing.lunchLocation || '미정'}
 📍 주소: ${outing.lunchAddress || '현장 안내'}
 🔗 지도: ${outing.lunchLink || '-'}
 
-🍖 저녁: ${outing.dinnerTime ? `[${outing.dinnerTime}] ` : ''}${outing.dinnerLocation || '미정'}
+🍖 저녁: ${outing.dinnerTime ? `[${formatTime(outing.dinnerTime)}] ` : ''}${outing.dinnerLocation || '미정'}
 📍 주소: ${outing.dinnerAddress || '현장 안내'}
 🔗 지도: ${outing.dinnerLink || '-'}
 
@@ -150,11 +162,11 @@ ${groupsText}
   const removeGuestFromGroup = (groupIndex: number, guestIdx: number) => {
     if (editingOuting) {
       const updatedGroups = [...(editingOuting.groups || [])];
-      updatedGroups[groupIndex].guests = updatedGroups[groupIndex].guests.filter((_, i) => i !== guestIdx);
+      updatedGroups[groupIndex].guests = (updatedGroups[groupIndex].guests || []).filter((_, i) => i !== guestIdx);
       setEditingOuting({ ...editingOuting, groups: updatedGroups });
     } else {
       const updatedGroups = [...(newOuting.groups || [])];
-      updatedGroups[groupIndex].guests = updatedGroups[groupIndex].guests.filter((_, i) => i !== guestIdx);
+      updatedGroups[groupIndex].guests = (updatedGroups[groupIndex].guests || []).filter((_, i) => i !== guestIdx);
       setNewOuting({ ...newOuting, groups: updatedGroups });
     }
   };
@@ -242,14 +254,14 @@ ${groupsText}
                   <div className={`flex flex-col p-2 rounded-lg border ${outing.lunchLocation ? 'bg-amber-50/50 border-amber-100' : 'bg-slate-50 border-slate-100'}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1 text-[9px] font-black text-amber-600 uppercase mb-0.5"><Coffee size={10} /> 점심</div>
-                      {outing.lunchTime && <span className="text-[8px] font-bold text-amber-400">{outing.lunchTime}</span>}
+                      {outing.lunchTime && <span className="text-[8px] font-bold text-amber-400">{formatTime(outing.lunchTime)}</span>}
                     </div>
                     <div className="text-[10px] font-bold text-slate-700 truncate">{outing.lunchLocation || "미정"}</div>
                   </div>
                   <div className={`flex flex-col p-2 rounded-lg border ${outing.dinnerLocation ? 'bg-emerald-50/50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1 text-[9px] font-black text-emerald-600 uppercase mb-0.5"><Utensils size={10} /> 저녁</div>
-                      {outing.dinnerTime && <span className="text-[8px] font-bold text-emerald-400">{outing.dinnerTime}</span>}
+                      {outing.dinnerTime && <span className="text-[8px] font-bold text-emerald-400">{formatTime(outing.dinnerTime)}</span>}
                     </div>
                     <div className="text-[10px] font-bold text-slate-700 truncate">{outing.dinnerLocation || "미정"}</div>
                   </div>
@@ -296,7 +308,7 @@ ${groupsText}
                 </div>
               </div>
 
-              {/* 조 편성 편집기 - 게스트 기능 통합 */}
+              {/* 조 편성 편집기 */}
               <div className="space-y-4 pt-4 border-t border-slate-100">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black text-emerald-600 uppercase flex items-center gap-2">조별 명단 편성 (회원/게스트)</h4>
@@ -318,7 +330,6 @@ ${groupsText}
                       />
                       
                       <div className="space-y-3">
-                        {/* 정회원 목록 */}
                         <div className="flex flex-wrap gap-1.5">
                           {members.map(m => {
                             const isSelected = (group.memberIds || []).includes(m.id);
@@ -335,7 +346,6 @@ ${groupsText}
                           })}
                         </div>
 
-                        {/* 게스트 목록 */}
                         <div className="flex flex-wrap gap-1.5">
                           {(group.guests || []).map((guest, guestIdx) => (
                             <div key={guestIdx} className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-[9px] font-bold text-amber-800">
@@ -345,7 +355,6 @@ ${groupsText}
                           ))}
                         </div>
 
-                        {/* 게스트 추가 입력 */}
                         <div className="flex gap-1.5 pt-1">
                           <input 
                             placeholder="게스트 이름"
@@ -368,7 +377,7 @@ ${groupsText}
                 </div>
               </div>
 
-              {/* 식사 정보 섹션 */}
+              {/* 식사 정보 섹션 - 시간 선택기로 변경 */}
               <div className="space-y-4 pt-4 border-t border-slate-100">
                 <h4 className="text-xs font-black text-emerald-600 uppercase flex items-center gap-2">식사 안내 설정</h4>
                 
@@ -386,8 +395,8 @@ ${groupsText}
                           <div className="relative">
                             <Clock size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-300" />
                             <input 
-                              placeholder="시간 (예: 12:30)"
-                              className="pl-6 pr-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold w-24 outline-none focus:ring-1 focus:ring-emerald-400"
+                              type="time"
+                              className="pl-6 pr-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold w-28 outline-none focus:ring-1 focus:ring-emerald-400"
                               value={data[`${type}Time`] || ''}
                               onChange={e => editingOuting ? setEditingOuting({...editingOuting, [`${type}Time`]: e.target.value}) : setNewOuting({...newOuting, [`${type}Time`]: e.target.value})}
                             />
