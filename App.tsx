@@ -7,7 +7,10 @@ import {
   LayoutDashboard, 
   MessageSquare, 
   Wallet,
-  AlertTriangle
+  AlertTriangle,
+  Share2,
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { View, Outing, Member, RoundScore, FeeRecord } from './types.ts';
 import Dashboard from './components/Dashboard.tsx';
@@ -22,6 +25,7 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
   const [isKakao, setIsKakao] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
   
   const [members, setMembers] = useState<Member[]>([]);
   const [outings, setOutings] = useState<Outing[]>([]);
@@ -52,10 +56,25 @@ const App: React.FC = () => {
     setFees(savedFees || []);
   };
 
+  // URL 해시에서 데이터를 추출하여 자동 동기화
+  const handleUrlImport = () => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#data=')) {
+      const dataStr = hash.substring(6);
+      if (storageService.importFullData(dataStr)) {
+        // 동기화 성공 시 해시 제거하고 새로고침하여 데이터 반영
+        window.history.replaceState(null, '', window.location.pathname);
+        loadAllData();
+        alert('성공적으로 최신 클럽 데이터를 동기화했습니다!');
+      }
+    }
+  };
+
   useEffect(() => {
     const ua = navigator.userAgent.toLowerCase();
     if (ua.includes('kakaotalk')) setIsKakao(true);
     loadAllData();
+    handleUrlImport();
   }, []);
 
   useEffect(() => {
@@ -69,6 +88,15 @@ const App: React.FC = () => {
     const timer = setTimeout(() => setIsSyncing(false), 800);
     return () => clearTimeout(timer);
   }, [members, outings, scores, fees, initialCarryover]);
+
+  const handleShareCurrentState = () => {
+    const data = storageService.exportFullData();
+    const shareUrl = `${window.location.origin}${window.location.pathname}#data=${data}`;
+    
+    navigator.clipboard.writeText(shareUrl);
+    setCopySuccess(true);
+    setTimeout(() => setCopySuccess(false), 3000);
+  };
 
   const renderView = () => {
     switch (activeView) {
@@ -113,10 +141,13 @@ const App: React.FC = () => {
         </div>
 
         <div className="mt-8 pt-8 border-t border-emerald-900">
-          <div className="flex items-center gap-3 p-4 bg-emerald-900/30 rounded-2xl border border-emerald-800/50">
-             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-             <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">System Active</span>
-          </div>
+          <button 
+            onClick={handleShareCurrentState}
+            className={`w-full flex items-center justify-center gap-3 p-4 rounded-2xl border transition-all font-black text-xs ${copySuccess ? 'bg-emerald-500 border-emerald-400 text-white' : 'bg-emerald-900/30 border-emerald-800/50 text-emerald-400 hover:bg-emerald-900/50'}`}
+          >
+            {copySuccess ? <Check size={18} /> : <Share2 size={18} />}
+            <span>{copySuccess ? '동기화 링크 복사됨' : '현재 상태 공유'}</span>
+          </button>
         </div>
       </nav>
 
@@ -128,9 +159,18 @@ const App: React.FC = () => {
               <h1 className="text-xl font-black text-slate-900 tracking-tighter">동물원</h1>
             </div>
             <div className="hidden sm:flex items-center gap-2.5 px-4 py-1.5 bg-slate-50 border border-slate-100 rounded-full">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Club Finance Tracker</span>
+               <div className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} />
+               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{isSyncing ? 'Syncing...' : 'Live System'}</span>
             </div>
           </div>
+          
+          <button 
+            onClick={handleShareCurrentState}
+            className={`lg:hidden flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-black shadow-lg transition-all active:scale-95 ${copySuccess ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-slate-900 text-white shadow-slate-900/20'}`}
+          >
+            {copySuccess ? <Check size={16} /> : <Share2 size={16} />}
+            {copySuccess ? '복사 완료' : '전체 공유'}
+          </button>
         </header>
 
         <main className="flex-1 overflow-y-auto p-5 lg:p-12 pb-32 lg:pb-12 bg-slate-50/50">
@@ -148,12 +188,15 @@ const App: React.FC = () => {
       </div>
 
       {isKakao && (
-        <div className="fixed top-24 left-6 right-6 z-[100] bg-amber-900/95 backdrop-blur-md text-white p-5 rounded-3xl shadow-2xl border border-amber-500/30">
+        <div className="fixed top-24 left-6 right-6 z-[100] bg-amber-900/95 backdrop-blur-md text-white p-5 rounded-3xl shadow-2xl border border-amber-500/30 animate-in slide-in-from-top duration-500">
            <div className="flex items-start gap-4">
               <div className="bg-amber-500 p-2 rounded-2xl text-amber-950 shrink-0"><AlertTriangle size={20} /></div>
-              <p className="text-[11px] leading-relaxed text-amber-100/70 font-medium flex-1">
-                카톡 브라우저에서는 일부 기능이 제한될 수 있습니다. <b>'다른 브라우저로 열기'</b>를 이용해 주세요.
-              </p>
+              <div>
+                <p className="text-[11px] leading-relaxed text-amber-100/70 font-medium">
+                  카톡 브라우저에서는 공유 기능이 제한될 수 있습니다. <br/>
+                  <b>'다른 브라우저로 열기'</b>(Chrome, Safari 등)를 권장합니다.
+                </p>
+              </div>
            </div>
         </div>
       )}
