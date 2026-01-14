@@ -2,10 +2,10 @@
 export interface Member {
   id: string;
   name: string;
-  nickname?: string; // 회원 닉네임 추가
+  nickname?: string;
   handicap: number;
   avatar: string;
-  annualFeeTarget: number; // 회원별 내야 하는 연회비 목표 금액
+  annualFeeTarget: number;
 }
 
 export interface Outing {
@@ -14,9 +14,13 @@ export interface Outing {
   date: string;
   courseName: string;
   location: string;
-  lunchLocation?: string; // 점심 장소 추가
-  dinnerLocation?: string; // 저녁 장소 추가
-  participants: string[]; // Member IDs
+  lunchLocation?: string;
+  lunchAddress?: string; // 점심 주소 추가
+  lunchLink?: string; // 점심 지도 링크 추가
+  dinnerLocation?: string;
+  dinnerAddress?: string; // 저녁 주소 추가
+  dinnerLink?: string; // 저녁 지도 링크 추가
+  participants: string[];
   status: 'upcoming' | 'completed' | 'cancelled';
 }
 
@@ -28,7 +32,7 @@ export interface RoundScore {
   putts?: number;
   fairwaysHit?: number;
   date: string;
-  imageUrl?: string; // 스코어카드 사진 (Base64)
+  imageUrl?: string;
 }
 
 export interface FeeRecord {
@@ -36,9 +40,9 @@ export interface FeeRecord {
   memberId: string;
   amount: number;
   date: string;
-  purpose: string; // 예: "정기회비", "찬조", "기타"
+  purpose: string;
   status: 'paid' | 'unpaid';
-  memo?: string; // 메모 기능 추가
+  memo?: string;
 }
 
 export type View = 'dashboard' | 'outings' | 'scores' | 'members' | 'ai-caddy' | 'fees' | 'settings';
