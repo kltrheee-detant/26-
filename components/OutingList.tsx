@@ -36,10 +36,10 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
   });
 
   const handleCopyNotice = (outing: Outing) => {
-    // 조별 명단 포맷팅
+    // 조별 명단 포맷팅 (방어 코드 추가)
     const groupsText = outing.groups && outing.groups.length > 0 
       ? outing.groups.map(g => {
-          const membersStr = g.memberIds.map(mid => members.find(m => m.id === mid)?.name).filter(Boolean).join(', ');
+          const membersStr = (g.memberIds || []).map(mid => members.find(m => m.id === mid)?.name).filter(Boolean).join(', ');
           return `📍 ${g.name}: ${membersStr}`;
         }).join('\n')
       : '조 편성이 아직 진행 중입니다.';
@@ -84,15 +84,19 @@ ${groupsText}
   const handleUpdateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingOuting) {
-      onUpdate(editingOuting);
+      onUpdate({
+        ...editingOuting,
+        groups: editingOuting.groups || [],
+        participants: editingOuting.participants || []
+      });
       setEditingOuting(null);
     }
   };
 
   const addGroup = () => {
-    const groupName = `${(editingOuting ? editingOuting.groups.length : (newOuting.groups?.length || 0)) + 1}조`;
+    const groupName = `${(editingOuting ? (editingOuting.groups || []).length : (newOuting.groups?.length || 0)) + 1}조`;
     if (editingOuting) {
-      setEditingOuting({ ...editingOuting, groups: [...editingOuting.groups, { name: groupName, memberIds: [] }] });
+      setEditingOuting({ ...editingOuting, groups: [...(editingOuting.groups || []), { name: groupName, memberIds: [] }] });
     } else {
       setNewOuting({ ...newOuting, groups: [...(newOuting.groups || []), { name: groupName, memberIds: [] }] });
     }
@@ -100,21 +104,23 @@ ${groupsText}
 
   const toggleMemberInGroup = (groupIndex: number, memberId: string) => {
     if (editingOuting) {
-      const updatedGroups = [...editingOuting.groups];
+      const updatedGroups = [...(editingOuting.groups || [])];
       const group = updatedGroups[groupIndex];
-      if (group.memberIds.includes(memberId)) {
-        group.memberIds = group.memberIds.filter(id => id !== memberId);
+      const memberIds = group.memberIds || [];
+      if (memberIds.includes(memberId)) {
+        group.memberIds = memberIds.filter(id => id !== memberId);
       } else {
-        group.memberIds = [...group.memberIds, memberId];
+        group.memberIds = [...memberIds, memberId];
       }
       setEditingOuting({ ...editingOuting, groups: updatedGroups });
     } else {
       const updatedGroups = [...(newOuting.groups || [])];
       const group = updatedGroups[groupIndex];
-      if (group.memberIds.includes(memberId)) {
-        group.memberIds = group.memberIds.filter(id => id !== memberId);
+      const memberIds = group.memberIds || [];
+      if (memberIds.includes(memberId)) {
+        group.memberIds = memberIds.filter(id => id !== memberId);
       } else {
-        group.memberIds = [...group.memberIds, memberId];
+        group.memberIds = [...memberIds, memberId];
       }
       setNewOuting({ ...newOuting, groups: updatedGroups });
     }
@@ -122,7 +128,7 @@ ${groupsText}
 
   const removeGroup = (index: number) => {
     if (editingOuting) {
-      const updatedGroups = editingOuting.groups.filter((_, i) => i !== index);
+      const updatedGroups = (editingOuting.groups || []).filter((_, i) => i !== index);
       setEditingOuting({ ...editingOuting, groups: updatedGroups });
     } else {
       const updatedGroups = (newOuting.groups || []).filter((_, i) => i !== index);
@@ -219,14 +225,14 @@ ${groupsText}
 
               <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                 <div className="flex -space-x-2">
-                  {outing.participants.slice(0, 4).map(id => (
+                  {(outing.participants || []).slice(0, 4).map(id => (
                     <img key={id} src={members.find(m => m.id === id)?.avatar} className="w-8 h-8 rounded-full border-2 border-white shadow-sm" alt="" />
                   ))}
-                  {outing.participants.length > 4 && (
-                    <div className="w-8 h-8 rounded-full bg-emerald-50 border-2 border-white flex items-center justify-center text-[8px] font-black text-emerald-700 shadow-sm">+{outing.participants.length - 4}</div>
+                  {(outing.participants || []).length > 4 && (
+                    <div className="w-8 h-8 rounded-full bg-emerald-50 border-2 border-white flex items-center justify-center text-[8px] font-black text-emerald-700 shadow-sm">+{(outing.participants || []).length - 4}</div>
                   )}
                 </div>
-                <button onClick={() => setJoiningOutingId(outing.id)} className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-black hover:bg-emerald-600 hover:text-white transition-all shadow-sm border border-emerald-100">참가 및 조 편성</button>
+                <button onClick={() => setJoiningOutingId(outing.id)} className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-black hover:bg-emerald-600 hover:text-white transition-all shadow-sm border border-emerald-100">참가 및 조 확인</button>
               </div>
             </div>
           </div>
@@ -265,21 +271,21 @@ ${groupsText}
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(editingOuting ? editingOuting.groups : (newOuting.groups || [])).map((group, gIdx) => (
+                  {(editingOuting ? (editingOuting.groups || []) : (newOuting.groups || [])).map((group, gIdx) => (
                     <div key={gIdx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 relative group">
                       <button type="button" onClick={() => removeGroup(gIdx)} className="absolute top-2 right-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash size={14}/></button>
                       <input 
                         className="bg-transparent border-none font-black text-slate-700 text-xs w-2/3 mb-3 outline-none focus:text-emerald-600"
                         value={group.name}
                         onChange={e => {
-                          const updated = editingOuting ? [...editingOuting.groups] : [...(newOuting.groups || [])];
+                          const updated = editingOuting ? [...(editingOuting.groups || [])] : [...(newOuting.groups || [])];
                           updated[gIdx].name = e.target.value;
                           editingOuting ? setEditingOuting({...editingOuting, groups: updated}) : setNewOuting({...newOuting, groups: updated});
                         }}
                       />
                       <div className="flex flex-wrap gap-2">
                         {members.map(m => {
-                          const isSelected = group.memberIds.includes(m.id);
+                          const isSelected = (group.memberIds || []).includes(m.id);
                           return (
                             <button 
                               key={m.id} 
@@ -374,7 +380,7 @@ ${groupsText}
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">라운딩 참여 여부 체크</div>
               {members.map(member => {
-                const isParticipating = currentJoiningOuting.participants.includes(member.id);
+                const isParticipating = (currentJoiningOuting.participants || []).includes(member.id);
                 return (
                   <button 
                     key={member.id}
@@ -401,7 +407,7 @@ ${groupsText}
             </div>
 
             <div className="p-6 border-t border-slate-100 bg-slate-50 shrink-0">
-              <p className="text-[10px] text-slate-400 text-center mb-4">※ 조 편성은 일정 수정 메뉴에서 가능합니다.</p>
+              <p className="text-[10px] text-slate-400 text-center mb-4">※ 조 편성은 '일정 수정' 메뉴에서 가능합니다.</p>
               <button onClick={() => setJoiningOutingId(null)} className="w-full py-4 bg-emerald-900 text-white rounded-2xl font-black text-sm hover:bg-black transition-all shadow-lg">참여 명단 확정</button>
             </div>
           </div>

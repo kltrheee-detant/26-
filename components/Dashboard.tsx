@@ -87,11 +87,11 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
                       <p className="text-emerald-600 text-base font-black flex items-center gap-2 mb-6">
                          <MapPin size={18} /> {outing.courseName}
                          <span className="text-slate-300 font-normal ml-2">|</span>
-                         <span className="text-slate-500 font-bold ml-2 text-sm">참여 멤버 {outing.participants.length}명</span>
+                         <span className="text-slate-500 font-bold ml-2 text-sm">참여 멤버 {(outing.participants || []).length}명</span>
                       </p>
                       
-                      {/* 조 편성 현황 - 가로 꽉 차게 표시 */}
-                      {outing.groups && outing.groups.length > 0 && (
+                      {/* 조 편성 현황 - 방어 코드 추가 */}
+                      {(outing.groups || []).length > 0 && (
                         <div className="mb-6">
                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1">
                             <Users size={12} /> 조 편성 명단
@@ -101,7 +101,7 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
                               <div key={idx} className="bg-slate-50 border border-slate-100 rounded-2xl p-3">
                                 <div className="text-[10px] font-black text-emerald-700 mb-2 border-b border-emerald-100 pb-1">{group.name}</div>
                                 <div className="flex flex-wrap gap-1.5">
-                                  {group.memberIds.map(mid => {
+                                  {(group.memberIds || []).map(mid => {
                                     const member = members.find(m => m.id === mid);
                                     return (
                                       <div key={mid} className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
@@ -152,12 +152,12 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
                 <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
                    <div className="flex items-center gap-3">
                      <div className="flex -space-x-3">
-                        {outing.participants.slice(0, 6).map(id => (
+                        {(outing.participants || []).slice(0, 6).map(id => (
                            <img key={id} src={members.find(m => m.id === id)?.avatar} className="w-9 h-9 rounded-full border-4 border-white shadow-md" alt="" />
                         ))}
-                        {outing.participants.length > 6 && (
+                        {(outing.participants || []).length > 6 && (
                            <div className="w-9 h-9 rounded-full bg-slate-100 border-4 border-white flex items-center justify-center text-[10px] font-black text-slate-500 shadow-md">
-                              +{outing.participants.length - 6}
+                              +{(outing.participants || []).length - 6}
                            </div>
                         )}
                      </div>

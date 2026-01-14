@@ -51,7 +51,16 @@ const App: React.FC = () => {
       ]);
     }
 
-    if (savedOutings) setOutings(savedOutings);
+    // 마이그레이션: 기존 데이터에 groups 필드가 없으면 추가
+    if (savedOutings) {
+      const migratedOutings = savedOutings.map(o => ({
+        ...o,
+        groups: o.groups || [],
+        participants: o.participants || []
+      }));
+      setOutings(migratedOutings);
+    }
+    
     if (savedScores) setScores(savedScores);
     if (savedFees) setFees(savedFees);
   }, []);
@@ -215,7 +224,6 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            {/* 우측 상단 '새 라운딩' 버튼이 제거되었습니다. */}
           </div>
         </header>
 
