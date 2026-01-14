@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Outing, Member } from '../types.ts';
-import { Calendar, MapPin, Plus, MoreHorizontal, Filter, X, Check, Users, Edit3, Trash2, Utensils, Coffee } from 'lucide-react';
+import { Calendar, MapPin, Plus, MoreHorizontal, Filter, X, Check, Users, Edit3, Trash2, Utensils, Coffee, Share2, CopyCheck } from 'lucide-react';
 
 interface Props {
   outings: Outing[];
@@ -17,6 +17,7 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
   const [editingOuting, setEditingOuting] = useState<Outing | null>(null);
   const [joiningOutingId, setJoiningOutingId] = useState<string | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [newOuting, setNewOuting] = useState({
     title: '',
@@ -26,6 +27,31 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
     lunchLocation: '',
     dinnerLocation: ''
   });
+
+  const handleCopyNotice = (outing: Outing) => {
+    const participatingMembers = outing.participants
+      .map(id => members.find(m => m.id === id)?.name)
+      .filter(Boolean)
+      .join(', ');
+
+    const text = `[동물원 라운딩 공지]
+📌 제목: ${outing.title}
+📅 일시: ${new Date(outing.date).toLocaleDateString('ko-KR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+⛳ 장소: ${outing.courseName} (${outing.location})
+
+🍽 식사 안내
+🍱 점심: ${outing.lunchLocation || '미정 (추후공지)'}
+🍖 저녁: ${outing.dinnerLocation || '미정 (추후공지)'}
+
+👥 참여 멤버 (${outing.participants.length}명)
+${participatingMembers || '참여 신청 진행 중'}
+
+⛳ 많은 참석 바랍니다!`;
+
+    navigator.clipboard.writeText(text);
+    setCopiedId(outing.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,7 +103,15 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
             <div className="h-32 bg-emerald-900 relative overflow-hidden">
               <div className="absolute inset-0 bg-[url('https://picsum.photos/seed/golf/800/400')] bg-cover bg-center opacity-40 mix-blend-overlay group-hover:scale-110 transition-transform duration-700"></div>
               
-              <div className="absolute top-4 right-4 z-20">
+              <div className="absolute top-4 right-4 z-20 flex gap-2">
+                <button 
+                  onClick={() => handleCopyNotice(outing)}
+                  className={`backdrop-blur-md p-2 rounded-lg text-white border border-white/20 transition-all flex items-center gap-1.5 ${copiedId === outing.id ? 'bg-emerald-500 border-emerald-400' : 'bg-white/10 hover:bg-white/20'}`}
+                  title="공지문 복사"
+                >
+                  {copiedId === outing.id ? <CopyCheck size={16} /> : <Share2 size={16} />}
+                  <span className="text-[10px] font-black uppercase">{copiedId === outing.id ? 'Copied' : 'Share'}</span>
+                </button>
                 <button 
                   onClick={() => setActiveMenuId(activeMenuId === outing.id ? null : outing.id)}
                   className="bg-white/10 backdrop-blur-md p-2 rounded-lg text-white border border-white/20 hover:bg-white/20 transition-colors"
@@ -129,24 +163,26 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
                   <Calendar size={16} className="text-slate-400" />
                   <span>{new Date(outing.date).toLocaleDateString('ko-KR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
                 </div>
-                {(outing.lunchLocation || outing.dinnerLocation) && (
-                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
-                    {outing.lunchLocation && (
-                      <div className="flex items-center gap-2 text-xs">
-                        <Coffee size={14} className="text-amber-500" />
-                        <span className="font-bold text-slate-400 mr-1">점심:</span>
-                        <span className="text-slate-700 truncate">{outing.lunchLocation}</span>
-                      </div>
-                    )}
-                    {outing.dinnerLocation && (
-                      <div className="flex items-center gap-2 text-xs">
-                        <Utensils size={14} className="text-emerald-500" />
-                        <span className="font-bold text-slate-400 mr-1">저녁:</span>
-                        <span className="text-slate-700 truncate">{outing.dinnerLocation}</span>
-                      </div>
-                    )}
+                
+                {/* 식사 공지 표시 강화 */}
+                <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
+                  <div className={`flex flex-col p-2 rounded-lg border ${outing.lunchLocation ? 'bg-amber-50/50 border-amber-100' : 'bg-slate-50 border-slate-100'}`}>
+                    <div className="flex items-center gap-1 text-[9px] font-black text-amber-600 uppercase mb-0.5">
+                      <Coffee size={10} /> Lunch
+                    </div>
+                    <div className="text-[10px] font-bold text-slate-600 truncate">
+                      {outing.lunchLocation || "미정"}
+                    </div>
                   </div>
-                )}
+                  <div className={`flex flex-col p-2 rounded-lg border ${outing.dinnerLocation ? 'bg-emerald-50/50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
+                    <div className="flex items-center gap-1 text-[9px] font-black text-emerald-600 uppercase mb-0.5">
+                      <Utensils size={10} /> Dinner
+                    </div>
+                    <div className="text-[10px] font-bold text-slate-600 truncate">
+                      {outing.dinnerLocation || "미정"}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="pt-4 border-t border-slate-100 flex items-center justify-between">

@@ -10,7 +10,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { Trophy, Calendar, Users, TrendingUp, ChevronRight, Clock, Wallet, ImageIcon, Bell, Utensils, Coffee, MapPin } from 'lucide-react';
+import { Trophy, Calendar, Users, TrendingUp, ChevronRight, Clock, Wallet, ImageIcon, Bell, Utensils, Coffee, MapPin, Info } from 'lucide-react';
 
 interface Props {
   outings: Outing[];
@@ -62,7 +62,7 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
       <section className="space-y-4">
         <div className="flex items-center justify-between">
            <h3 className="text-sm font-black text-emerald-800 uppercase tracking-widest flex items-center gap-2">
-             <Calendar size={16} /> 다가오는 월례 라운딩
+             <Calendar size={16} /> 다가오는 월례 라운딩 공지
            </h3>
            <button 
              onClick={onNavigateOutings}
@@ -85,24 +85,31 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
                    </div>
                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                         <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded-full">공지</span>
+                         <span className="px-2 py-0.5 bg-amber-500 text-white text-[9px] font-black rounded-full animate-pulse">중요공지</span>
                          <h4 className="font-bold text-slate-800 truncate text-lg">{outing.title}</h4>
                       </div>
-                      <p className="text-emerald-600 text-xs font-black flex items-center gap-1 mb-3">
+                      <p className="text-emerald-600 text-xs font-black flex items-center gap-1 mb-4">
                          <MapPin size={12} /> {outing.courseName}
                       </p>
                       
-                      <div className="flex flex-wrap gap-x-4 gap-y-2">
-                         {outing.lunchLocation && (
-                            <div className="flex items-center gap-1 text-[11px] text-slate-500 font-bold">
-                               <Coffee size={12} className="text-amber-500" /> 점심: {outing.lunchLocation}
-                            </div>
-                         )}
-                         {outing.dinnerLocation && (
-                            <div className="flex items-center gap-1 text-[11px] text-slate-500 font-bold">
-                               <Utensils size={12} className="text-emerald-500" /> 저녁: {outing.dinnerLocation}
-                            </div>
-                         )}
+                      {/* 식사 공지 섹션 강조 */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className={`flex flex-col p-2.5 rounded-xl border ${outing.lunchLocation ? 'bg-amber-50 border-amber-100' : 'bg-slate-50 border-slate-100'}`}>
+                          <div className="flex items-center gap-1 text-[9px] font-black text-amber-600 uppercase mb-1">
+                            <Coffee size={10} /> Lunch Plan
+                          </div>
+                          <div className="text-[11px] font-bold text-slate-700 truncate">
+                            {outing.lunchLocation || "추후 공지"}
+                          </div>
+                        </div>
+                        <div className={`flex flex-col p-2.5 rounded-xl border ${outing.dinnerLocation ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
+                          <div className="flex items-center gap-1 text-[9px] font-black text-emerald-600 uppercase mb-1">
+                            <Utensils size={10} /> Dinner Plan
+                          </div>
+                          <div className="text-[11px] font-bold text-slate-700 truncate">
+                            {outing.dinnerLocation || "추후 공지"}
+                          </div>
+                        </div>
                       </div>
                    </div>
                 </div>
@@ -181,6 +188,7 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#cbd5e1', fontWeight: 700}} />
                     <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#cbd5e1', fontWeight: 700}} domain={['auto', 'auto']} reversed />
+                    {/* shadow property is not a valid CSS property in React CSSProperties, changed to boxShadow */}
                     <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
                     <Area type="monotone" dataKey="score" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorScore)" />
                   </AreaChart>
