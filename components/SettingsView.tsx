@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { storageService } from '../services/storageService.ts';
-import { Download, Upload, Share2, ShieldCheck, Database, Check, Copy, FileJson, Link as LinkIcon, ExternalLink, Smartphone, Apple, MoreVertical } from 'lucide-react';
+import { Download, Upload, Share2, ShieldCheck, Database, Check, Copy, FileJson, Link as LinkIcon, ExternalLink, Smartphone, Apple, MoreVertical, Info } from 'lucide-react';
 
 interface Props {
   onReload: () => void;
@@ -65,6 +65,27 @@ const SettingsView: React.FC<Props> = ({ onReload }) => {
         <div>
           <h2 className="text-2xl font-bold text-slate-800">설정 및 어플 관리</h2>
           <p className="text-slate-500">클럽 데이터를 멤버들과 안전하게 주고받고 설치하세요.</p>
+        </div>
+      </div>
+
+      {/* 공유 가이드 추가 */}
+      <div className="bg-white p-6 rounded-3xl border border-blue-100 shadow-sm space-y-4">
+        <h3 className="text-sm font-black text-blue-700 flex items-center gap-2 uppercase tracking-widest">
+           <Info size={16} /> 공유 방법 안내
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="text-xs font-black text-slate-800 mb-2">1. 그냥 앱만 공유할 때</div>
+              <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                게시판 상단의 <span className="text-blue-600 font-bold">'앱 주소만 공유'</span>를 누르세요. 멤버들은 빈 앱을 보게 됩니다.
+              </p>
+           </div>
+           <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+              <div className="text-xs font-black text-emerald-800 mb-2">2. 내용을 포함해 공유할 때</div>
+              <p className="text-[11px] text-emerald-700 leading-relaxed font-medium">
+                게시판의 <span className="text-emerald-600 font-bold">'현재 내용 포함 공유'</span>를 누르세요. 조 편성 정보까지 함께 전달됩니다.
+              </p>
+           </div>
         </div>
       </div>
 

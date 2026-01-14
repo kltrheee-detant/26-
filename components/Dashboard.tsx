@@ -11,7 +11,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { Trophy, Calendar, Users, TrendingUp, ChevronRight, Clock, Wallet, ImageIcon, Bell, Utensils, Coffee, MapPin, ExternalLink, Target, Flag, UserPlus, Share2, Check } from 'lucide-react';
+import { Trophy, Calendar, Users, TrendingUp, ChevronRight, Clock, Wallet, ImageIcon, Bell, Utensils, Coffee, MapPin, ExternalLink, Target, Flag, UserPlus, Share2, Check, Copy, Info } from 'lucide-react';
 
 interface Props {
   outings: Outing[];
@@ -23,7 +23,7 @@ interface Props {
 }
 
 const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCarryover, onNavigateOutings }) => {
-  const [linkCopied, setLinkCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'app' | 'data'>('idle');
   
   const upcomingOutings = outings
     .filter(o => o.status === 'upcoming')
@@ -52,53 +52,75 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
     }
   };
 
+  const handleShareAppOnly = () => {
+    const appUrl = window.location.origin + window.location.pathname;
+    navigator.clipboard.writeText(appUrl);
+    setCopyStatus('app');
+    setTimeout(() => setCopyStatus('idle'), 2000);
+  };
+
   const handleShareFullData = () => {
     const data = storageService.exportFullData();
     const baseUrl = window.location.origin + window.location.pathname;
     const shareUrl = `${baseUrl}#import=${data}`;
     
     navigator.clipboard.writeText(shareUrl);
-    setLinkCopied(true);
-    setTimeout(() => setLinkCopied(false), 2000);
+    setCopyStatus('data');
+    setTimeout(() => setCopyStatus('idle'), 2000);
   };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-5xl mx-auto pb-10">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             동물원 게시판 <Bell size={20} className="text-amber-500 fill-amber-500" />
           </h2>
           <p className="text-slate-500 text-sm font-medium">라운딩 일정과 클럽 지표를 한눈에 확인하세요.</p>
         </div>
-        <div className="hidden md:block">
-           <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Live Sync: ON</span>
+        
+        {/* 공유 섹션 개선 */}
+        <div className="flex flex-wrap items-center gap-2 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+           <div className="px-2 text-[10px] font-black text-slate-400 uppercase tracking-tighter border-r border-slate-100 mr-1">Share</div>
+           <button 
+             onClick={handleShareAppOnly}
+             className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${copyStatus === 'app' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+           >
+             {copyStatus === 'app' ? <Check size={14} /> : <Copy size={14} />}
+             {copyStatus === 'app' ? '앱 주소 복사됨' : '앱 주소만 공유'}
+           </button>
+           <button 
+             onClick={handleShareFullData}
+             className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${copyStatus === 'data' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
+           >
+             {copyStatus === 'data' ? <Check size={14} /> : <Share2 size={14} />}
+             {copyStatus === 'data' ? '내용 포함 주소 복사됨' : '현재 내용 포함 공유'}
+           </button>
         </div>
       </header>
 
-      {/* [최상단 공지] 가로 꽉 찬 레이아웃 */}
+      {/* 안내 배너 추가 */}
+      {copyStatus === 'data' && (
+        <div className="bg-emerald-900 text-white p-4 rounded-2xl animate-in slide-in-from-top-2 flex items-center gap-3 shadow-xl">
+           <div className="p-2 bg-white/10 rounded-xl"><Info size={20} className="text-emerald-400" /></div>
+           <p className="text-xs font-bold leading-relaxed">
+             멤버들에게 전달할 <span className="text-emerald-300 underline underline-offset-4">현재 조 편성과 식사 정보가 포함된 특수 링크</span>가 복사되었습니다! 카톡방에 붙여넣으세요.
+           </p>
+        </div>
+      )}
+
+      {/* [최상단 공지] */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
            <h3 className="text-sm font-black text-emerald-800 uppercase tracking-widest flex items-center gap-2">
              <Calendar size={16} /> 다음 라운딩 주요 공지
            </h3>
-           <div className="flex items-center gap-4">
-             {upcomingOutings.length > 0 && (
-               <button 
-                 onClick={handleShareFullData}
-                 className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black transition-all border shadow-sm ${linkCopied ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-white text-emerald-700 border-emerald-100 hover:bg-emerald-50'}`}
-               >
-                 {linkCopied ? <Check size={12} /> : <Share2 size={12} />}
-                 {linkCopied ? '데이터 링크 복사됨!' : '전체 데이터 링크 공유'}
-               </button>
-             )}
-             <button 
-               onClick={onNavigateOutings}
-               className="text-xs font-bold text-slate-400 hover:text-emerald-600 flex items-center gap-1 transition-colors"
-             >
-               전체 일정 <ChevronRight size={14} />
-             </button>
-           </div>
+           <button 
+             onClick={onNavigateOutings}
+             className="text-xs font-bold text-slate-400 hover:text-emerald-600 flex items-center gap-1 transition-colors"
+           >
+             전체 일정 <ChevronRight size={14} />
+           </button>
         </div>
         
         <div className="flex flex-col gap-4">
@@ -109,13 +131,11 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
                 </div>
                 
                 <div className="flex flex-col md:flex-row md:items-start gap-8">
-                   {/* 날짜 박스 */}
                    <div className="bg-emerald-900 text-white w-24 h-24 rounded-3xl flex flex-col items-center justify-center shrink-0 shadow-2xl shadow-emerald-950/40">
                       <span className="text-xs font-black uppercase opacity-60 mb-1">{new Date(outing.date).getMonth() + 1}월</span>
                       <span className="text-4xl font-black">{new Date(outing.date).getDate()}</span>
                    </div>
 
-                   {/* 정보 영역 */}
                    <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-3 mb-2">
                          <span className="px-3 py-1 bg-amber-500 text-white text-[10px] font-black rounded-full shadow-sm">MUST CHECK</span>
@@ -127,7 +147,6 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
                          <span className="text-slate-500 font-bold ml-2 text-sm">참여 멤버 {(outing.participants || []).length}명</span>
                       </p>
                       
-                      {/* 조 편성 현황 - 티업 시간 표시 추가 */}
                       {(outing.groups || []).length > 0 && (
                         <div className="mb-6">
                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1">
@@ -167,7 +186,6 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
                         </div>
                       )}
 
-                      {/* 식사 계획 */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {[
                           {type: 'lunch', label: '점심 식사', loc: outing.lunchLocation, time: outing.lunchTime, addr: outing.lunchAddress, link: outing.lunchLink, icon: <Coffee size={14} />, color: 'amber'},
