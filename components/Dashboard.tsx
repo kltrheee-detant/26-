@@ -10,7 +10,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { Trophy, Calendar, Users, TrendingUp, ChevronRight, Clock, Wallet, ImageIcon, Bell, Utensils, Coffee, MapPin, ExternalLink, Target, Flag } from 'lucide-react';
+import { Trophy, Calendar, Users, TrendingUp, ChevronRight, Clock, Wallet, ImageIcon, Bell, Utensils, Coffee, MapPin, ExternalLink, Target, Flag, UserPlus } from 'lucide-react';
 
 interface Props {
   outings: Outing[];
@@ -90,7 +90,7 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
                          <span className="text-slate-500 font-bold ml-2 text-sm">참여 멤버 {(outing.participants || []).length}명</span>
                       </p>
                       
-                      {/* 조 편성 현황 - 방어 코드 추가 */}
+                      {/* 조 편성 현황 - 게스트 표시 로직 추가 */}
                       {(outing.groups || []).length > 0 && (
                         <div className="mb-6">
                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1">
@@ -101,6 +101,7 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
                               <div key={idx} className="bg-slate-50 border border-slate-100 rounded-2xl p-3">
                                 <div className="text-[10px] font-black text-emerald-700 mb-2 border-b border-emerald-100 pb-1">{group.name}</div>
                                 <div className="flex flex-wrap gap-1.5">
+                                  {/* 정회원 표시 */}
                                   {(group.memberIds || []).map(mid => {
                                     const member = members.find(m => m.id === mid);
                                     return (
@@ -110,6 +111,13 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
                                       </div>
                                     );
                                   })}
+                                  {/* 게스트 표시 */}
+                                  {(group.guests || []).map((guest, gIdx) => (
+                                    <div key={`g-${gIdx}`} className="flex items-center gap-1.5 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100 shadow-sm">
+                                      <UserPlus size={10} className="text-amber-600" />
+                                      <span className="text-[11px] font-bold text-amber-800">{guest}</span>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             ))}

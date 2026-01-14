@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Outing, Member, OutingGroup } from '../types.ts';
-import { Calendar, MapPin, Plus, MoreHorizontal, Filter, X, Check, Users, Edit3, Trash2, Utensils, Coffee, Share2, CopyCheck, ExternalLink, Link as LinkIcon, Clock, Trash } from 'lucide-react';
+import { Calendar, MapPin, Plus, MoreHorizontal, Filter, X, Check, Users, Edit3, Trash2, Utensils, Coffee, Share2, CopyCheck, ExternalLink, Link as LinkIcon, Clock, Trash, UserPlus } from 'lucide-react';
 
 interface Props {
   outings: Outing[];
@@ -18,6 +18,9 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
   const [joiningOutingId, setJoiningOutingId] = useState<string | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  
+  // 게스트 입력용 로컬 상태
+  const [guestInputs, setGuestInputs] = useState<Record<number, string>>({});
 
   const [newOuting, setNewOuting] = useState<Partial<Outing>>({
     title: '',
@@ -36,11 +39,13 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
   });
 
   const handleCopyNotice = (outing: Outing) => {
-    // 조별 명단 포맷팅 (방어 코드 추가)
+    // 조별 명단 포맷팅 (정회원 + 게스트)
     const groupsText = outing.groups && outing.groups.length > 0 
       ? outing.groups.map(g => {
           const membersStr = (g.memberIds || []).map(mid => members.find(m => m.id === mid)?.name).filter(Boolean).join(', ');
-          return `📍 ${g.name}: ${membersStr}`;
+          const guestsStr = (g.guests || []).join(', ');
+          const allMembers = [membersStr, guestsStr].filter(Boolean).join(', ');
+          return `📍 ${g.name}: ${allMembers}`;
         }).join('\n')
       : '조 편성이 아직 진행 중입니다.';
 
@@ -96,9 +101,9 @@ ${groupsText}
   const addGroup = () => {
     const groupName = `${(editingOuting ? (editingOuting.groups || []).length : (newOuting.groups?.length || 0)) + 1}조`;
     if (editingOuting) {
-      setEditingOuting({ ...editingOuting, groups: [...(editingOuting.groups || []), { name: groupName, memberIds: [] }] });
+      setEditingOuting({ ...editingOuting, groups: [...(editingOuting.groups || []), { name: groupName, memberIds: [], guests: [] }] });
     } else {
-      setNewOuting({ ...newOuting, groups: [...(newOuting.groups || []), { name: groupName, memberIds: [] }] });
+      setNewOuting({ ...newOuting, groups: [...(newOuting.groups || []), { name: groupName, memberIds: [], guests: [] }] });
     }
   };
 
@@ -122,6 +127,34 @@ ${groupsText}
       } else {
         group.memberIds = [...memberIds, memberId];
       }
+      setNewOuting({ ...newOuting, groups: updatedGroups });
+    }
+  };
+
+  const addGuestToGroup = (groupIndex: number) => {
+    const guestName = guestInputs[groupIndex]?.trim();
+    if (!guestName) return;
+
+    if (editingOuting) {
+      const updatedGroups = [...(editingOuting.groups || [])];
+      updatedGroups[groupIndex].guests = [...(updatedGroups[groupIndex].guests || []), guestName];
+      setEditingOuting({ ...editingOuting, groups: updatedGroups });
+    } else {
+      const updatedGroups = [...(newOuting.groups || [])];
+      updatedGroups[groupIndex].guests = [...(updatedGroups[groupIndex].guests || []), guestName];
+      setNewOuting({ ...newOuting, groups: updatedGroups });
+    }
+    setGuestInputs({ ...guestInputs, [groupIndex]: '' });
+  };
+
+  const removeGuestFromGroup = (groupIndex: number, guestIdx: number) => {
+    if (editingOuting) {
+      const updatedGroups = [...(editingOuting.groups || [])];
+      updatedGroups[groupIndex].guests = updatedGroups[groupIndex].guests.filter((_, i) => i !== guestIdx);
+      setEditingOuting({ ...editingOuting, groups: updatedGroups });
+    } else {
+      const updatedGroups = [...(newOuting.groups || [])];
+      updatedGroups[groupIndex].guests = updatedGroups[groupIndex].guests.filter((_, i) => i !== guestIdx);
       setNewOuting({ ...newOuting, groups: updatedGroups });
     }
   };
@@ -263,16 +296,16 @@ ${groupsText}
                 </div>
               </div>
 
-              {/* 조 편성 편집기 */}
+              {/* 조 편성 편집기 - 게스트 기능 통합 */}
               <div className="space-y-4 pt-4 border-t border-slate-100">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-black text-emerald-600 uppercase flex items-center gap-2">조별 명단 편성</h4>
+                  <h4 className="text-xs font-black text-emerald-600 uppercase flex items-center gap-2">조별 명단 편성 (회원/게스트)</h4>
                   <button type="button" onClick={addGroup} className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all">+ 조 추가</button>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {(editingOuting ? (editingOuting.groups || []) : (newOuting.groups || [])).map((group, gIdx) => (
-                    <div key={gIdx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 relative group">
+                    <div key={gIdx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 relative group flex flex-col">
                       <button type="button" onClick={() => removeGroup(gIdx)} className="absolute top-2 right-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash size={14}/></button>
                       <input 
                         className="bg-transparent border-none font-black text-slate-700 text-xs w-2/3 mb-3 outline-none focus:text-emerald-600"
@@ -283,21 +316,52 @@ ${groupsText}
                           editingOuting ? setEditingOuting({...editingOuting, groups: updated}) : setNewOuting({...newOuting, groups: updated});
                         }}
                       />
-                      <div className="flex flex-wrap gap-2">
-                        {members.map(m => {
-                          const isSelected = (group.memberIds || []).includes(m.id);
-                          return (
-                            <button 
-                              key={m.id} 
-                              type="button" 
-                              onClick={() => toggleMemberInGroup(gIdx, m.id)}
-                              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${isSelected ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
-                            >
-                              <img src={m.avatar} className="w-3 h-3 rounded-full" alt="" />
-                              {m.name}
-                            </button>
-                          );
-                        })}
+                      
+                      <div className="space-y-3">
+                        {/* 정회원 목록 */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {members.map(m => {
+                            const isSelected = (group.memberIds || []).includes(m.id);
+                            return (
+                              <button 
+                                key={m.id} 
+                                type="button" 
+                                onClick={() => toggleMemberInGroup(gIdx, m.id)}
+                                className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[9px] font-bold transition-all ${isSelected ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
+                              >
+                                {m.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* 게스트 목록 */}
+                        <div className="flex flex-wrap gap-1.5">
+                          {(group.guests || []).map((guest, guestIdx) => (
+                            <div key={guestIdx} className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 border border-amber-200 text-[9px] font-bold text-amber-800">
+                              <span>{guest}</span>
+                              <button type="button" onClick={() => removeGuestFromGroup(gIdx, guestIdx)} className="text-amber-400 hover:text-rose-500"><X size={10}/></button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* 게스트 추가 입력 */}
+                        <div className="flex gap-1.5 pt-1">
+                          <input 
+                            placeholder="게스트 이름"
+                            value={guestInputs[gIdx] || ''}
+                            onChange={e => setGuestInputs({...guestInputs, [gIdx]: e.target.value})}
+                            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addGuestToGroup(gIdx))}
+                            className="flex-1 p-2 bg-white border border-slate-200 rounded-lg text-[10px] font-bold outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => addGuestToGroup(gIdx)}
+                            className="px-2 bg-slate-800 text-white rounded-lg text-[10px] font-black hover:bg-emerald-600 transition-colors"
+                          >
+                            추가
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -365,7 +429,7 @@ ${groupsText}
         </div>
       )}
 
-      {/* 참가 신청 멤버 선택 모달 (조 편성 기능 포함) */}
+      {/* 참가 신청 멤버 선택 모달 */}
       {joiningOutingId && currentJoiningOuting && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">

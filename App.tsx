@@ -51,11 +51,14 @@ const App: React.FC = () => {
       ]);
     }
 
-    // 마이그레이션: 기존 데이터에 groups 필드가 없으면 추가
     if (savedOutings) {
       const migratedOutings = savedOutings.map(o => ({
         ...o,
-        groups: o.groups || [],
+        groups: (o.groups || []).map(g => ({
+          ...g,
+          memberIds: g.memberIds || [],
+          guests: g.guests || [] // 게스트 필드 마이그레이션 추가
+        })),
         participants: o.participants || []
       }));
       setOutings(migratedOutings);
@@ -221,9 +224,6 @@ const App: React.FC = () => {
               {isSyncing ? <RefreshCw size={10} className="animate-spin" /> : <CloudCheck size={12} />}
               {isSyncing ? '동기화 중...' : '클라우드 보호됨'}
             </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
           </div>
         </header>
 

@@ -11,6 +11,7 @@ export interface Member {
 export interface OutingGroup {
   name: string;
   memberIds: string[];
+  guests: string[]; // 게스트 이름 리스트 추가
 }
 
 export interface Outing {
@@ -20,15 +21,15 @@ export interface Outing {
   courseName: string;
   location: string;
   lunchLocation?: string;
-  lunchTime?: string; // 식사 시간 추가
+  lunchTime?: string;
   lunchAddress?: string;
   lunchLink?: string;
   dinnerLocation?: string;
-  dinnerTime?: string; // 식사 시간 추가
+  dinnerTime?: string;
   dinnerAddress?: string;
   dinnerLink?: string;
   participants: string[];
-  groups: OutingGroup[]; // 조 편성 필드 추가
+  groups: OutingGroup[];
   status: 'upcoming' | 'completed' | 'cancelled';
 }
 
