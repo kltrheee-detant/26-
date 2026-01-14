@@ -10,7 +10,8 @@ import {
   Settings,
   Wallet,
   CloudCheck,
-  RefreshCw
+  RefreshCw,
+  DownloadCloud
 } from 'lucide-react';
 import { View, Outing, Member, RoundScore, FeeRecord } from './types.ts';
 import Dashboard from './components/Dashboard.tsx';
@@ -25,6 +26,8 @@ import { storageService } from './services/storageService.ts';
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showImportPrompt, setShowImportPrompt] = useState(false);
+  const [pendingData, setPendingData] = useState<string | null>(null);
   
   const [members, setMembers] = useState<Member[]>([]);
   const [outings, setOutings] = useState<Outing[]>([]);
@@ -32,7 +35,8 @@ const App: React.FC = () => {
   const [fees, setFees] = useState<FeeRecord[]>([]);
   const [initialCarryover, setInitialCarryover] = useState(0);
 
-  useEffect(() => {
+  // 데이터 로드 함수
+  const loadAllData = () => {
     const savedMembers = storageService.loadMembers();
     const savedOutings = storageService.loadOutings();
     const savedScores = storageService.loadScores();
@@ -58,15 +62,31 @@ const App: React.FC = () => {
           ...g,
           memberIds: g.memberIds || [],
           guests: g.guests || [],
-          teeOffTime: g.teeOffTime || '' // 조별 티업 시간 필드 마이그레이션
+          teeOffTime: g.teeOffTime || ''
         })),
         participants: o.participants || []
       }));
       setOutings(migratedOutings);
+    } else {
+      setOutings([]);
     }
     
-    if (savedScores) setScores(savedScores);
-    if (savedFees) setFees(savedFees);
+    if (savedScores) setScores(savedScores); else setScores([]);
+    if (savedFees) setFees(savedFees); else setFees([]);
+  };
+
+  useEffect(() => {
+    loadAllData();
+
+    // URL 해시에서 공유 데이터 확인
+    const hash = window.location.hash;
+    if (hash.startsWith('#import=')) {
+      const data = hash.replace('#import=', '');
+      setPendingData(data);
+      setShowImportPrompt(true);
+      // 주소창 깔끔하게 비우기
+      window.history.replaceState(null, '', window.location.pathname);
+    }
   }, []);
 
   useEffect(() => {
@@ -80,6 +100,15 @@ const App: React.FC = () => {
     const timer = setTimeout(() => setIsSyncing(false), 1000);
     return () => clearTimeout(timer);
   }, [members, outings, scores, fees, initialCarryover]);
+
+  const handleConfirmImport = () => {
+    if (pendingData && storageService.importFullData(pendingData)) {
+      loadAllData();
+      setShowImportPrompt(false);
+      setPendingData(null);
+      alert('데이터 동기화가 완료되었습니다!');
+    }
+  };
 
   const handleAddOuting = (newOuting: Outing) => setOutings(prev => [newOuting, ...prev]);
   const handleUpdateOuting = (updatedOuting: Outing) => {
@@ -172,7 +201,7 @@ const App: React.FC = () => {
           />
         );
       case 'settings':
-        return <SettingsView onReload={() => window.location.reload()} />;
+        return <SettingsView onReload={loadAllData} />;
       default:
         return <Dashboard outings={outings} scores={scores} members={members} fees={fees} initialCarryover={initialCarryover} onNavigateOutings={() => setActiveView('outings')} />;
     }
@@ -240,6 +269,40 @@ const App: React.FC = () => {
           <MobileNavItem icon={<Settings />} active={activeView === 'settings'} onClick={() => setActiveView('settings')} />
         </nav>
       </div>
+
+      {/* 공유 링크 감지 팝업 */}
+      {showImportPrompt && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-8 text-center space-y-4">
+              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto">
+                <DownloadCloud size={32} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-800">데이터 공유 감지</h3>
+                <p className="text-sm text-slate-500 mt-2 leading-relaxed font-medium">
+                  멤버가 공유한 새로운 클럽 데이터를 불러올까요?<br/>
+                  <span className="text-rose-500 font-bold">※ 현재 내 기기의 데이터가 교체됩니다.</span>
+                </p>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button 
+                  onClick={() => setShowImportPrompt(false)}
+                  className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-bold text-sm"
+                >
+                  취소
+                </button>
+                <button 
+                  onClick={handleConfirmImport}
+                  className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-emerald-900/20"
+                >
+                  데이터 통합하기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

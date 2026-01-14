@@ -40,25 +40,46 @@ export const storageService = {
     return data ? parseInt(data) : 0;
   },
 
-  // 전체 데이터 내보내기 (공유용)
+  // 전체 데이터 객체 생성
+  getFullData: () => ({
+    members: storageService.loadMembers(),
+    outings: storageService.loadOutings(),
+    scores: storageService.loadScores(),
+    fees: storageService.loadFees(),
+    carryover: storageService.loadCarryover(),
+    version: '1.1',
+    exportedAt: new Date().toISOString()
+  }),
+
+  // 전체 데이터 내보내기 (Base64)
   exportFullData: () => {
-    const fullData = {
-      members: storageService.loadMembers(),
-      outings: storageService.loadOutings(),
-      scores: storageService.loadScores(),
-      fees: storageService.loadFees(),
-      carryover: storageService.loadCarryover(),
-      version: '1.0',
-      exportedAt: new Date().toISOString()
-    };
-    return btoa(encodeURIComponent(JSON.stringify(fullData))); // Base64 encoding for easy sharing
+    const data = storageService.getFullData();
+    return btoa(encodeURIComponent(JSON.stringify(data)));
   },
 
-  // 데이터 가져오기
-  importFullData: (base64Data: string) => {
+  // JSON 파일로 다운로드
+  downloadAsFile: () => {
+    const data = storageService.getFullData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zoo_golf_data_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  // 데이터 가져오기 (문자열 또는 객체)
+  importFullData: (source: string | any) => {
     try {
-      const decoded = decodeURIComponent(atob(base64Data));
-      const parsed = JSON.parse(decoded);
+      let parsed;
+      if (typeof source === 'string') {
+        const decoded = decodeURIComponent(atob(source));
+        parsed = JSON.parse(decoded);
+      } else {
+        parsed = source;
+      }
+
       if (parsed.members) storageService.saveMembers(parsed.members);
       if (parsed.outings) storageService.saveOutings(parsed.outings);
       if (parsed.scores) storageService.saveScores(parsed.scores);
