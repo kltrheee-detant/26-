@@ -5,7 +5,8 @@ const STORAGE_KEYS = {
   MEMBERS: 'zoo_members',
   OUTINGS: 'zoo_outings',
   SCORES: 'zoo_scores',
-  FEES: 'zoo_fees'
+  FEES: 'zoo_fees',
+  CARRYOVER: 'zoo_carryover'
 };
 
 export const storageService = {
@@ -33,6 +34,12 @@ export const storageService = {
     return data ? JSON.parse(data) : null;
   },
 
+  saveCarryover: (amount: number) => localStorage.setItem(STORAGE_KEYS.CARRYOVER, amount.toString()),
+  loadCarryover: (): number => {
+    const data = localStorage.getItem(STORAGE_KEYS.CARRYOVER);
+    return data ? parseInt(data) : 0;
+  },
+
   // 전체 데이터 내보내기 (공유용)
   exportFullData: () => {
     const fullData = {
@@ -40,6 +47,7 @@ export const storageService = {
       outings: storageService.loadOutings(),
       scores: storageService.loadScores(),
       fees: storageService.loadFees(),
+      carryover: storageService.loadCarryover(),
       version: '1.0',
       exportedAt: new Date().toISOString()
     };
@@ -55,6 +63,7 @@ export const storageService = {
       if (parsed.outings) storageService.saveOutings(parsed.outings);
       if (parsed.scores) storageService.saveScores(parsed.scores);
       if (parsed.fees) storageService.saveFees(parsed.fees);
+      if (parsed.carryover !== undefined) storageService.saveCarryover(parsed.carryover);
       return true;
     } catch (e) {
       console.error("Import failed", e);

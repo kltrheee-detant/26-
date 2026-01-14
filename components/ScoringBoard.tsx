@@ -32,13 +32,17 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
   const resetForm = () => {
     setMemberId('');
     setOutingId('');
-    // 현재 리더보드에서 보고 있는 년/월의 1일로 기본값 설정 (오늘 날짜가 해당 월이 아닐 경우를 대비)
-    const now = new Date();
-    const isCurrentMonthView = now.getFullYear() === selectedYear && (now.getMonth() + 1) === selectedMonth;
     
-    if (isCurrentMonthView) {
+    // 현재 리더보드에서 보고 있는 년/월에 맞게 날짜 초기화
+    const now = new Date();
+    const isSameYear = now.getFullYear() === selectedYear;
+    const isSameMonth = (now.getMonth() + 1) === selectedMonth;
+    
+    if (isSameYear && isSameMonth) {
+      // 오늘이 포함된 월을 보고 있다면 오늘 날짜로 세팅
       setScoreDate(now.toISOString().split('T')[0]);
     } else {
+      // 다른 월을 보고 있다면 해당 월의 1일로 세팅
       const monthStr = selectedMonth < 10 ? `0${selectedMonth}` : selectedMonth;
       setScoreDate(`${selectedYear}-${monthStr}-01`);
     }
@@ -48,7 +52,7 @@ const ScoringBoard: React.FC<Props> = ({ scores, members, outings, onAdd, onUpda
     setEditingScore(null);
   };
 
-  // 라운딩 일정 선택 시 날짜 자동 업데이트
+  // 라운딩 일정 선택 시 해당 일정 날짜로 자동 업데이트
   useEffect(() => {
     if (outingId && outingId !== 'external') {
       const selectedOuting = outings.find(o => o.id === outingId);

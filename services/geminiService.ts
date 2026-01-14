@@ -2,14 +2,9 @@
 import { GoogleGenAI } from "@google/genai";
 import { POCHEON_HILLS_DATA } from "./pocheonHillsData.ts";
 
-const getAI = () => {
-  // process 객체가 정의되지 않은 환경에서도 에러가 나지 않도록 처리
-  const apiKey = typeof process !== 'undefined' ? process.env.API_KEY : '';
-  return new GoogleGenAI({ apiKey: apiKey as string });
-};
-
 export const getGolfAdvice = async (query: string) => {
-  const ai = getAI();
+  // Always initialize GoogleGenAI with a fresh instance right before the call
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const courseContext = JSON.stringify(POCHEON_HILLS_DATA);
   
   try {
@@ -43,17 +38,19 @@ ${courseContext}
 };
 
 export const getCourseInfo = async (location: string) => {
-    const ai = getAI();
+    // Always initialize GoogleGenAI with a fresh instance right before the call
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     try {
+      // Fix: Maps grounding is only supported in Gemini 2.5 series models
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.5-flash',
         contents: `${location} 주변의 최고 골프 코스는 어디인가요? 난이도와 시그니처 홀에 대한 간략한 정보를 한국어로 알려주세요.`,
         config: {
           tools: [{ googleMaps: {} }]
         }
       });
       return {
-          text: response.text,
+          text: response.text || "",
           sources: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
       };
     } catch (error) {

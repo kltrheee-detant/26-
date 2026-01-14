@@ -30,12 +30,16 @@ const App: React.FC = () => {
   const [outings, setOutings] = useState<Outing[]>([]);
   const [scores, setScores] = useState<RoundScore[]>([]);
   const [fees, setFees] = useState<FeeRecord[]>([]);
+  const [initialCarryover, setInitialCarryover] = useState(0);
 
   useEffect(() => {
     const savedMembers = storageService.loadMembers();
     const savedOutings = storageService.loadOutings();
     const savedScores = storageService.loadScores();
     const savedFees = storageService.loadFees();
+    const savedCarryover = storageService.loadCarryover();
+
+    setInitialCarryover(savedCarryover);
 
     if (savedMembers && savedMembers.length > 0) {
       setMembers(savedMembers);
@@ -57,11 +61,12 @@ const App: React.FC = () => {
     storageService.saveOutings(outings);
     storageService.saveScores(scores);
     storageService.saveFees(fees);
+    storageService.saveCarryover(initialCarryover);
     
     setIsSyncing(true);
     const timer = setTimeout(() => setIsSyncing(false), 1000);
     return () => clearTimeout(timer);
-  }, [members, outings, scores, fees]);
+  }, [members, outings, scores, fees, initialCarryover]);
 
   const handleAddOuting = (newOuting: Outing) => setOutings(prev => [newOuting, ...prev]);
   const handleUpdateOuting = (updatedOuting: Outing) => {
@@ -122,7 +127,7 @@ const App: React.FC = () => {
   const renderView = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard outings={outings} scores={scores} members={members} fees={fees} />;
+        return <Dashboard outings={outings} scores={scores} members={members} fees={fees} initialCarryover={initialCarryover} />;
       case 'outings':
         return (
           <OutingList 
@@ -141,11 +146,22 @@ const App: React.FC = () => {
       case 'ai-caddy':
         return <AICaddy />;
       case 'fees':
-        return <FeeManagement fees={fees} members={members} onToggleStatus={handleToggleFeeStatus} onAdd={handleAddFee} onUpdate={handleUpdateFee} onDelete={handleDeleteFee} />;
+        return (
+          <FeeManagement 
+            fees={fees} 
+            members={members} 
+            onToggleStatus={handleToggleFeeStatus} 
+            onAdd={handleAddFee} 
+            onUpdate={handleUpdateFee} 
+            onDelete={handleDeleteFee} 
+            initialCarryover={initialCarryover}
+            onUpdateCarryover={setInitialCarryover}
+          />
+        );
       case 'settings':
         return <SettingsView onReload={() => window.location.reload()} />;
       default:
-        return <Dashboard outings={outings} scores={scores} members={members} fees={fees} />;
+        return <Dashboard outings={outings} scores={scores} members={members} fees={fees} initialCarryover={initialCarryover} />;
     }
   };
 
@@ -199,7 +215,7 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            {/* 우측 상단 새 라운딩 버튼 제거됨 */}
+            {/* 우측 상단 '새 라운딩' 버튼이 제거되었습니다. */}
           </div>
         </header>
 

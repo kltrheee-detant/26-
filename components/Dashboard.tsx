@@ -17,12 +17,16 @@ interface Props {
   scores: RoundScore[];
   members: Member[];
   fees: FeeRecord[];
+  initialCarryover: number;
 }
 
-const Dashboard: React.FC<Props> = ({ outings, scores, members, fees }) => {
+const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCarryover }) => {
   const upcomingOutings = outings.filter(o => o.status === 'upcoming');
   const unpaidCount = fees.filter(f => f.status === 'unpaid').length;
-  const totalBalance = fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + f.amount, 0);
+  const totalPaidFees = fees.filter(f => f.status === 'paid').reduce((sum, f) => sum + f.amount, 0);
+  
+  // 가용 자산 = 초기 이월 금액 + 납부된 총 회비
+  const totalBalance = initialCarryover + totalPaidFees;
   
   // 최근 사진이 있는 스코어 3개
   const recentPhotos = scores.filter(s => s.imageUrl).slice(-3).reverse();
@@ -55,9 +59,9 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees }) => {
         />
         <StatCard 
           icon={<Wallet className="text-blue-600" />} 
-          label="누적 회비 잔액" 
+          label="클럽 가용 자산" 
           value={`${totalBalance.toLocaleString()}원`} 
-          trend={`${unpaidCount}건 미납`} 
+          trend="이월금 포함" 
           color="blue"
         />
         <StatCard 
@@ -93,7 +97,8 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees }) => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
                     <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} domain={['auto', 'auto']} reversed />
-                    <Tooltip contentStyle={{borderRadius: '12px', border: 'none', shadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                    {/* Fix: shadow property is not a valid CSS property in React CSSProperties, changed to boxShadow */}
+                    <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                     <Area type="monotone" dataKey="score" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
                   </AreaChart>
                 </ResponsiveContainer>
