@@ -8,6 +8,11 @@ export interface Member {
   annualFeeTarget: number;
 }
 
+export interface OutingGroup {
+  name: string;
+  memberIds: string[];
+}
+
 export interface Outing {
   id: string;
   title: string;
@@ -15,12 +20,15 @@ export interface Outing {
   courseName: string;
   location: string;
   lunchLocation?: string;
-  lunchAddress?: string; // 점심 주소 추가
-  lunchLink?: string; // 점심 지도 링크 추가
+  lunchTime?: string; // 식사 시간 추가
+  lunchAddress?: string;
+  lunchLink?: string;
   dinnerLocation?: string;
-  dinnerAddress?: string; // 저녁 주소 추가
-  dinnerLink?: string; // 저녁 지도 링크 추가
+  dinnerTime?: string; // 식사 시간 추가
+  dinnerAddress?: string;
+  dinnerLink?: string;
   participants: string[];
+  groups: OutingGroup[]; // 조 편성 필드 추가
   status: 'upcoming' | 'completed' | 'cancelled';
 }
 

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Outing, Member } from '../types.ts';
-import { Calendar, MapPin, Plus, MoreHorizontal, Filter, X, Check, Users, Edit3, Trash2, Utensils, Coffee, Share2, CopyCheck, ExternalLink, Link as LinkIcon } from 'lucide-react';
+import { Outing, Member, OutingGroup } from '../types.ts';
+import { Calendar, MapPin, Plus, MoreHorizontal, Filter, X, Check, Users, Edit3, Trash2, Utensils, Coffee, Share2, CopyCheck, ExternalLink, Link as LinkIcon, Clock, Trash } from 'lucide-react';
 
 interface Props {
   outings: Outing[];
@@ -19,41 +19,47 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const [newOuting, setNewOuting] = useState({
+  const [newOuting, setNewOuting] = useState<Partial<Outing>>({
     title: '',
     date: '',
     courseName: '',
     location: '',
     lunchLocation: '',
+    lunchTime: '',
     lunchAddress: '',
     lunchLink: '',
     dinnerLocation: '',
+    dinnerTime: '',
     dinnerAddress: '',
-    dinnerLink: ''
+    dinnerLink: '',
+    groups: []
   });
 
   const handleCopyNotice = (outing: Outing) => {
-    const participatingMembers = outing.participants
-      .map(id => members.find(m => m.id === id)?.name)
-      .filter(Boolean)
-      .join(', ');
+    // 조별 명단 포맷팅
+    const groupsText = outing.groups && outing.groups.length > 0 
+      ? outing.groups.map(g => {
+          const membersStr = g.memberIds.map(mid => members.find(m => m.id === mid)?.name).filter(Boolean).join(', ');
+          return `📍 ${g.name}: ${membersStr}`;
+        }).join('\n')
+      : '조 편성이 아직 진행 중입니다.';
 
     const text = `[동물원 라운딩 공지]
 📌 제목: ${outing.title}
 📅 일시: ${new Date(outing.date).toLocaleDateString('ko-KR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-⛳ 장소: ${outing.courseName} (${outing.location})
+⛳ 장소: ${outing.courseName} (${outing.location || '정보없음'})
+
+👥 조 편성 안내
+${groupsText}
 
 🍽 식사 안내
-🍱 점심: ${outing.lunchLocation || '미정'}
+🍱 점심: ${outing.lunchTime ? `[${outing.lunchTime}] ` : ''}${outing.lunchLocation || '미정'}
 📍 주소: ${outing.lunchAddress || '현장 안내'}
 🔗 지도: ${outing.lunchLink || '-'}
 
-🍖 저녁: ${outing.dinnerLocation || '미정'}
+🍖 저녁: ${outing.dinnerTime ? `[${outing.dinnerTime}] ` : ''}${outing.dinnerLocation || '미정'}
 📍 주소: ${outing.dinnerAddress || '현장 안내'}
 🔗 지도: ${outing.dinnerLink || '-'}
-
-👥 참여 멤버 (${outing.participants.length}명)
-${participatingMembers || '참여 신청 진행 중'}
 
 ⛳ 즐거운 라운딩 되세요!`;
 
@@ -68,10 +74,11 @@ ${participatingMembers || '참여 신청 진행 중'}
       ...newOuting,
       id: Date.now().toString(),
       participants: [],
-      status: 'upcoming'
+      status: 'upcoming',
+      groups: newOuting.groups || []
     } as Outing);
     setShowAddModal(false);
-    setNewOuting({ title: '', date: '', courseName: '', location: '', lunchLocation: '', lunchAddress: '', lunchLink: '', dinnerLocation: '', dinnerAddress: '', dinnerLink: '' });
+    setNewOuting({ title: '', date: '', courseName: '', location: '', lunchLocation: '', lunchTime: '', lunchAddress: '', lunchLink: '', dinnerLocation: '', dinnerTime: '', dinnerAddress: '', dinnerLink: '', groups: [] });
   };
 
   const handleUpdateSubmit = (e: React.FormEvent) => {
@@ -82,14 +89,55 @@ ${participatingMembers || '참여 신청 진행 중'}
     }
   };
 
+  const addGroup = () => {
+    const groupName = `${(editingOuting ? editingOuting.groups.length : (newOuting.groups?.length || 0)) + 1}조`;
+    if (editingOuting) {
+      setEditingOuting({ ...editingOuting, groups: [...editingOuting.groups, { name: groupName, memberIds: [] }] });
+    } else {
+      setNewOuting({ ...newOuting, groups: [...(newOuting.groups || []), { name: groupName, memberIds: [] }] });
+    }
+  };
+
+  const toggleMemberInGroup = (groupIndex: number, memberId: string) => {
+    if (editingOuting) {
+      const updatedGroups = [...editingOuting.groups];
+      const group = updatedGroups[groupIndex];
+      if (group.memberIds.includes(memberId)) {
+        group.memberIds = group.memberIds.filter(id => id !== memberId);
+      } else {
+        group.memberIds = [...group.memberIds, memberId];
+      }
+      setEditingOuting({ ...editingOuting, groups: updatedGroups });
+    } else {
+      const updatedGroups = [...(newOuting.groups || [])];
+      const group = updatedGroups[groupIndex];
+      if (group.memberIds.includes(memberId)) {
+        group.memberIds = group.memberIds.filter(id => id !== memberId);
+      } else {
+        group.memberIds = [...group.memberIds, memberId];
+      }
+      setNewOuting({ ...newOuting, groups: updatedGroups });
+    }
+  };
+
+  const removeGroup = (index: number) => {
+    if (editingOuting) {
+      const updatedGroups = editingOuting.groups.filter((_, i) => i !== index);
+      setEditingOuting({ ...editingOuting, groups: updatedGroups });
+    } else {
+      const updatedGroups = (newOuting.groups || []).filter((_, i) => i !== index);
+      setNewOuting({ ...newOuting, groups: updatedGroups });
+    }
+  };
+
   const currentJoiningOuting = outings.find(o => o.id === joiningOutingId);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">라운딩 일정</h2>
-          <p className="text-slate-500">라운딩 장소와 식사 정보를 관리하고 공지문을 복사하세요.</p>
+          <h2 className="text-2xl font-bold text-slate-800">라운딩 일정 관리</h2>
+          <p className="text-slate-500">조별 명단과 식사 시간을 관리하고 단톡방용 공지문을 생성하세요.</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
@@ -153,11 +201,17 @@ ${participatingMembers || '참여 신청 진행 중'}
                 
                 <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2">
                   <div className={`flex flex-col p-2 rounded-lg border ${outing.lunchLocation ? 'bg-amber-50/50 border-amber-100' : 'bg-slate-50 border-slate-100'}`}>
-                    <div className="flex items-center gap-1 text-[9px] font-black text-amber-600 uppercase mb-0.5"><Coffee size={10} /> Lunch</div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1 text-[9px] font-black text-amber-600 uppercase mb-0.5"><Coffee size={10} /> 점심</div>
+                      {outing.lunchTime && <span className="text-[8px] font-bold text-amber-400">{outing.lunchTime}</span>}
+                    </div>
                     <div className="text-[10px] font-bold text-slate-700 truncate">{outing.lunchLocation || "미정"}</div>
                   </div>
                   <div className={`flex flex-col p-2 rounded-lg border ${outing.dinnerLocation ? 'bg-emerald-50/50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
-                    <div className="flex items-center gap-1 text-[9px] font-black text-emerald-600 uppercase mb-0.5"><Utensils size={10} /> Dinner</div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1 text-[9px] font-black text-emerald-600 uppercase mb-0.5"><Utensils size={10} /> 저녁</div>
+                      {outing.dinnerTime && <span className="text-[8px] font-bold text-emerald-400">{outing.dinnerTime}</span>}
+                    </div>
                     <div className="text-[10px] font-bold text-slate-700 truncate">{outing.dinnerLocation || "미정"}</div>
                   </div>
                 </div>
@@ -172,7 +226,7 @@ ${participatingMembers || '참여 신청 진행 중'}
                     <div className="w-8 h-8 rounded-full bg-emerald-50 border-2 border-white flex items-center justify-center text-[8px] font-black text-emerald-700 shadow-sm">+{outing.participants.length - 4}</div>
                   )}
                 </div>
-                <button onClick={() => setJoiningOutingId(outing.id)} className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-black hover:bg-emerald-600 hover:text-white transition-all shadow-sm border border-emerald-100">참가 관리</button>
+                <button onClick={() => setJoiningOutingId(outing.id)} className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl text-xs font-black hover:bg-emerald-600 hover:text-white transition-all shadow-sm border border-emerald-100">참가 및 조 편성</button>
               </div>
             </div>
           </div>
@@ -182,16 +236,16 @@ ${participatingMembers || '참여 신청 진행 중'}
       {/* 일정 등록/수정 모달 */}
       {(showAddModal || editingOuting) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h3 className="text-xl font-bold text-slate-800">{editingOuting ? '일정 수정하기' : '새 라운딩 일정'}</h3>
               <button onClick={() => { setShowAddModal(false); setEditingOuting(null); }} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
             </div>
             <form onSubmit={editingOuting ? handleUpdateSubmit : handleAddSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto no-scrollbar">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">일정 제목</label>
-                  <input required type="text" value={editingOuting ? editingOuting.title : newOuting.title} onChange={e => editingOuting ? setEditingOuting({...editingOuting, title: e.target.value}) : setNewOuting({...newOuting, title: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-bold" placeholder="예: 6월 정기 라운딩" />
+                  <input required type="text" value={editingOuting ? editingOuting.title : newOuting.title} onChange={e => editingOuting ? setEditingOuting({...editingOuting, title: e.target.value}) : setNewOuting({...newOuting, title: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-bold" placeholder="예: 7월 포천힐스 월례회" />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">날짜</label>
@@ -203,48 +257,100 @@ ${participatingMembers || '참여 신청 진행 중'}
                 </div>
               </div>
 
-              {/* 식사 정보 수동 입력 섹션 */}
-              <div className="space-y-4 pt-2">
-                <h4 className="text-xs font-black text-emerald-600 uppercase border-b border-emerald-50 pb-1 flex items-center gap-2">식사 및 공지 정보</h4>
+              {/* 조 편성 편집기 */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black text-emerald-600 uppercase flex items-center gap-2">조별 명단 편성</h4>
+                  <button type="button" onClick={addGroup} className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all">+ 조 추가</button>
+                </div>
                 
-                {['lunch', 'dinner'].map((type) => {
-                  const target = type === 'lunch' ? '점심' : '저녁';
-                  const loc = editingOuting ? (editingOuting as any)[`${type}Location`] : (newOuting as any)[`${type}Location`];
-                  const addr = editingOuting ? (editingOuting as any)[`${type}Address`] : (newOuting as any)[`${type}Address`];
-                  const link = editingOuting ? (editingOuting as any)[`${type}Link`] : (newOuting as any)[`${type}Link`];
-                  
-                  return (
-                    <div key={type} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
-                      <label className="flex items-center gap-1 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                        {type === 'lunch' ? <Coffee size={12} className="text-amber-500" /> : <Utensils size={12} className="text-emerald-500" />} {target} 장소 정보
-                      </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(editingOuting ? editingOuting.groups : (newOuting.groups || [])).map((group, gIdx) => (
+                    <div key={gIdx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 relative group">
+                      <button type="button" onClick={() => removeGroup(gIdx)} className="absolute top-2 right-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash size={14}/></button>
                       <input 
-                        placeholder={`${target} 식당 이름`}
-                        className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold shadow-inner"
-                        value={loc || ''}
-                        onChange={e => editingOuting ? setEditingOuting({...editingOuting, [`${type}Location`]: e.target.value}) : setNewOuting({...newOuting, [`${type}Location`]: e.target.value})}
+                        className="bg-transparent border-none font-black text-slate-700 text-xs w-2/3 mb-3 outline-none focus:text-emerald-600"
+                        value={group.name}
+                        onChange={e => {
+                          const updated = editingOuting ? [...editingOuting.groups] : [...(newOuting.groups || [])];
+                          updated[gIdx].name = e.target.value;
+                          editingOuting ? setEditingOuting({...editingOuting, groups: updated}) : setNewOuting({...newOuting, groups: updated});
+                        }}
                       />
-                      <input 
-                        placeholder="상세 주소"
-                        className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-600 shadow-inner"
-                        value={addr || ''}
-                        onChange={e => editingOuting ? setEditingOuting({...editingOuting, [`${type}Address`]: e.target.value}) : setNewOuting({...newOuting, [`${type}Address`]: e.target.value})}
-                      />
-                      <div className="relative">
-                        <LinkIcon size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
-                        <input 
-                          placeholder="네이버/구글 지도 링크"
-                          className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-[10px] text-emerald-600 font-medium shadow-inner"
-                          value={link || ''}
-                          onChange={e => editingOuting ? setEditingOuting({...editingOuting, [`${type}Link`]: e.target.value}) : setNewOuting({...newOuting, [`${type}Link`]: e.target.value})}
-                        />
+                      <div className="flex flex-wrap gap-2">
+                        {members.map(m => {
+                          const isSelected = group.memberIds.includes(m.id);
+                          return (
+                            <button 
+                              key={m.id} 
+                              type="button" 
+                              onClick={() => toggleMemberInGroup(gIdx, m.id)}
+                              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[10px] font-bold transition-all ${isSelected ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
+                            >
+                              <img src={m.avatar} className="w-3 h-3 rounded-full" alt="" />
+                              {m.name}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
 
-              <div className="flex gap-3 pt-4 sticky bottom-0 bg-white">
+              {/* 식사 정보 섹션 */}
+              <div className="space-y-4 pt-4 border-t border-slate-100">
+                <h4 className="text-xs font-black text-emerald-600 uppercase flex items-center gap-2">식사 안내 설정</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {['lunch', 'dinner'].map((type) => {
+                    const target = type === 'lunch' ? '점심' : '저녁';
+                    const data = editingOuting ? (editingOuting as any) : (newOuting as any);
+                    
+                    return (
+                      <div key={type} className="p-5 bg-slate-50 rounded-3xl border border-slate-200 space-y-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase">
+                            {type === 'lunch' ? <Coffee size={14} className="text-amber-500" /> : <Utensils size={14} className="text-emerald-500" />} {target} 정보
+                          </label>
+                          <div className="relative">
+                            <Clock size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-300" />
+                            <input 
+                              placeholder="시간 (예: 12:30)"
+                              className="pl-6 pr-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold w-24 outline-none focus:ring-1 focus:ring-emerald-400"
+                              value={data[`${type}Time`] || ''}
+                              onChange={e => editingOuting ? setEditingOuting({...editingOuting, [`${type}Time`]: e.target.value}) : setNewOuting({...newOuting, [`${type}Time`]: e.target.value})}
+                            />
+                          </div>
+                        </div>
+                        <input 
+                          placeholder={`${target} 장소명`}
+                          className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold shadow-inner outline-none focus:ring-2 focus:ring-emerald-500"
+                          value={data[`${type}Location`] || ''}
+                          onChange={e => editingOuting ? setEditingOuting({...editingOuting, [`${type}Location`]: e.target.value}) : setNewOuting({...newOuting, [`${type}Location`]: e.target.value})}
+                        />
+                        <input 
+                          placeholder="식당 상세 주소"
+                          className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-600 shadow-inner outline-none focus:ring-2 focus:ring-emerald-500"
+                          value={data[`${type}Address`] || ''}
+                          onChange={e => editingOuting ? setEditingOuting({...editingOuting, [`${type}Address`]: e.target.value}) : setNewOuting({...newOuting, [`${type}Address`]: e.target.value})}
+                        />
+                        <div className="relative">
+                          <LinkIcon size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
+                          <input 
+                            placeholder="지도 링크"
+                            className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] text-emerald-600 font-medium shadow-inner outline-none focus:ring-2 focus:ring-emerald-500"
+                            value={data[`${type}Link`] || ''}
+                            onChange={e => editingOuting ? setEditingOuting({...editingOuting, [`${type}Link`]: e.target.value}) : setNewOuting({...newOuting, [`${type}Link`]: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-6 sticky bottom-0 bg-white">
                 <button type="button" onClick={() => { setShowAddModal(false); setEditingOuting(null); }} className="flex-1 py-4 text-sm font-bold text-slate-500 bg-slate-100 rounded-2xl transition-all">취소</button>
                 <button type="submit" className="flex-1 py-4 text-sm font-black text-white bg-emerald-600 hover:bg-emerald-700 rounded-2xl transition-all shadow-lg">일정 저장 완료</button>
               </div>
@@ -253,7 +359,7 @@ ${participatingMembers || '참여 신청 진행 중'}
         </div>
       )}
 
-      {/* 참가 신청 멤버 선택 모달 */}
+      {/* 참가 신청 멤버 선택 모달 (조 편성 기능 포함) */}
       {joiningOutingId && currentJoiningOuting && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
           <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]">
@@ -266,6 +372,7 @@ ${participatingMembers || '참여 신청 진행 중'}
             </div>
             
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">라운딩 참여 여부 체크</div>
               {members.map(member => {
                 const isParticipating = currentJoiningOuting.participants.includes(member.id);
                 return (
@@ -284,7 +391,7 @@ ${participatingMembers || '참여 신청 진행 중'}
                       </div>
                     </div>
                     {isParticipating ? (
-                      <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-white"><Check size={14} strokeWidth={4} /></div>
+                      <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-sm"><Check size={14} strokeWidth={4} /></div>
                     ) : (
                       <div className="w-6 h-6 rounded-full border-2 border-slate-100 bg-slate-50"></div>
                     )}
@@ -294,7 +401,8 @@ ${participatingMembers || '참여 신청 진행 중'}
             </div>
 
             <div className="p-6 border-t border-slate-100 bg-slate-50 shrink-0">
-              <button onClick={() => setJoiningOutingId(null)} className="w-full py-4 bg-slate-800 text-white rounded-2xl font-black text-sm hover:bg-slate-900 transition-all shadow-lg">관리 완료</button>
+              <p className="text-[10px] text-slate-400 text-center mb-4">※ 조 편성은 일정 수정 메뉴에서 가능합니다.</p>
+              <button onClick={() => setJoiningOutingId(null)} className="w-full py-4 bg-emerald-900 text-white rounded-2xl font-black text-sm hover:bg-black transition-all shadow-lg">참여 명단 확정</button>
             </div>
           </div>
         </div>
