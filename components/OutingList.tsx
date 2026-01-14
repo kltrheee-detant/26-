@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Outing, Member, OutingGroup } from '../types.ts';
-import { Calendar, MapPin, Plus, MoreHorizontal, Filter, X, Check, Users, Edit3, Trash2, Utensils, Coffee, Share2, CopyCheck, ExternalLink, Link as LinkIcon, Clock, Trash, UserPlus } from 'lucide-react';
+import { Calendar, MapPin, Plus, MoreHorizontal, Filter, X, Check, Users, Edit3, Trash2, Utensils, Coffee, Share2, CopyCheck, ExternalLink, Link as LinkIcon, Clock, Trash, UserPlus, Flag } from 'lucide-react';
 
 interface Props {
   outings: Outing[];
@@ -57,7 +57,8 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
           const membersStr = (g.memberIds || []).map(mid => members.find(m => m.id === mid)?.name).filter(Boolean).join(', ');
           const guestsStr = (g.guests || []).join(', ');
           const allMembers = [membersStr, guestsStr].filter(Boolean).join(', ');
-          return `📍 ${g.name}: ${allMembers}`;
+          const teeTimeStr = g.teeOffTime ? `[${formatTime(g.teeOffTime)}] ` : '';
+          return `📍 ${g.name}: ${teeTimeStr}${allMembers}`;
         }).join('\n')
       : '조 편성이 아직 진행 중입니다.';
 
@@ -66,7 +67,7 @@ const OutingList: React.FC<Props> = ({ outings, members, onAdd, onUpdate, onDele
 📅 일시: ${new Date(outing.date).toLocaleDateString('ko-KR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 ⛳ 장소: ${outing.courseName} (${outing.location || '정보없음'})
 
-👥 조 편성 안내
+👥 조 편성 안내 (티업 시간 포함)
 ${groupsText}
 
 🍽 식사 안내
@@ -113,9 +114,9 @@ ${groupsText}
   const addGroup = () => {
     const groupName = `${(editingOuting ? (editingOuting.groups || []).length : (newOuting.groups?.length || 0)) + 1}조`;
     if (editingOuting) {
-      setEditingOuting({ ...editingOuting, groups: [...(editingOuting.groups || []), { name: groupName, memberIds: [], guests: [] }] });
+      setEditingOuting({ ...editingOuting, groups: [...(editingOuting.groups || []), { name: groupName, memberIds: [], guests: [], teeOffTime: '' }] });
     } else {
-      setNewOuting({ ...newOuting, groups: [...(newOuting.groups || []), { name: groupName, memberIds: [], guests: [] }] });
+      setNewOuting({ ...newOuting, groups: [...(newOuting.groups || []), { name: groupName, memberIds: [], guests: [], teeOffTime: '' }] });
     }
   };
 
@@ -308,7 +309,7 @@ ${groupsText}
                 </div>
               </div>
 
-              {/* 조 편성 편집기 */}
+              {/* 조 편성 편집기 - 티업 시간 추가 */}
               <div className="space-y-4 pt-4 border-t border-slate-100">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black text-emerald-600 uppercase flex items-center gap-2">조별 명단 편성 (회원/게스트)</h4>
@@ -319,15 +320,31 @@ ${groupsText}
                   {(editingOuting ? (editingOuting.groups || []) : (newOuting.groups || [])).map((group, gIdx) => (
                     <div key={gIdx} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 relative group flex flex-col">
                       <button type="button" onClick={() => removeGroup(gIdx)} className="absolute top-2 right-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash size={14}/></button>
-                      <input 
-                        className="bg-transparent border-none font-black text-slate-700 text-xs w-2/3 mb-3 outline-none focus:text-emerald-600"
-                        value={group.name}
-                        onChange={e => {
-                          const updated = editingOuting ? [...(editingOuting.groups || [])] : [...(newOuting.groups || [])];
-                          updated[gIdx].name = e.target.value;
-                          editingOuting ? setEditingOuting({...editingOuting, groups: updated}) : setNewOuting({...newOuting, groups: updated});
-                        }}
-                      />
+                      
+                      <div className="flex items-center gap-2 mb-3">
+                        <input 
+                          className="bg-transparent border-none font-black text-slate-700 text-xs w-20 outline-none focus:text-emerald-600"
+                          value={group.name}
+                          onChange={e => {
+                            const updated = editingOuting ? [...(editingOuting.groups || [])] : [...(newOuting.groups || [])];
+                            updated[gIdx].name = e.target.value;
+                            editingOuting ? setEditingOuting({...editingOuting, groups: updated}) : setNewOuting({...newOuting, groups: updated});
+                          }}
+                        />
+                        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2 py-0.5">
+                          <Flag size={10} className="text-emerald-600" />
+                          <input 
+                            type="time"
+                            className="text-[10px] font-bold bg-transparent border-none outline-none w-24"
+                            value={group.teeOffTime || ''}
+                            onChange={e => {
+                              const updated = editingOuting ? [...(editingOuting.groups || [])] : [...(newOuting.groups || [])];
+                              updated[gIdx].teeOffTime = e.target.value;
+                              editingOuting ? setEditingOuting({...editingOuting, groups: updated}) : setNewOuting({...newOuting, groups: updated});
+                            }}
+                          />
+                        </div>
+                      </div>
                       
                       <div className="space-y-3">
                         <div className="flex flex-wrap gap-1.5">
@@ -377,7 +394,7 @@ ${groupsText}
                 </div>
               </div>
 
-              {/* 식사 정보 섹션 - 시간 선택기로 변경 */}
+              {/* 식사 정보 섹션 */}
               <div className="space-y-4 pt-4 border-t border-slate-100">
                 <h4 className="text-xs font-black text-emerald-600 uppercase flex items-center gap-2">식사 안내 설정</h4>
                 

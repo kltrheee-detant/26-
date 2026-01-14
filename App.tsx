@@ -57,7 +57,8 @@ const App: React.FC = () => {
         groups: (o.groups || []).map(g => ({
           ...g,
           memberIds: g.memberIds || [],
-          guests: g.guests || [] // 게스트 필드 마이그레이션 추가
+          guests: g.guests || [],
+          teeOffTime: g.teeOffTime || '' // 조별 티업 시간 필드 마이그레이션
         })),
         participants: o.participants || []
       }));

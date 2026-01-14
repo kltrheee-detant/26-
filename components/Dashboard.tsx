@@ -103,16 +103,23 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
                          <span className="text-slate-500 font-bold ml-2 text-sm">참여 멤버 {(outing.participants || []).length}명</span>
                       </p>
                       
-                      {/* 조 편성 현황 */}
+                      {/* 조 편성 현황 - 티업 시간 표시 추가 */}
                       {(outing.groups || []).length > 0 && (
                         <div className="mb-6">
                           <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1">
-                            <Users size={12} /> 조 편성 명단
+                            <Users size={12} /> 조 편성 및 티업 시간
                           </h5>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                             {outing.groups.map((group, idx) => (
                               <div key={idx} className="bg-slate-50 border border-slate-100 rounded-2xl p-3">
-                                <div className="text-[10px] font-black text-emerald-700 mb-2 border-b border-emerald-100 pb-1">{group.name}</div>
+                                <div className="flex items-center justify-between mb-2 border-b border-emerald-100 pb-1">
+                                  <div className="text-[10px] font-black text-emerald-700">{group.name}</div>
+                                  {group.teeOffTime && (
+                                    <div className="text-[9px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                      <Clock size={8} /> {formatTime(group.teeOffTime)}
+                                    </div>
+                                  )}
+                                </div>
                                 <div className="flex flex-wrap gap-1.5">
                                   {(group.memberIds || []).map(mid => {
                                     const member = members.find(m => m.id === mid);

@@ -11,7 +11,8 @@ export interface Member {
 export interface OutingGroup {
   name: string;
   memberIds: string[];
-  guests: string[]; // 게스트 이름 리스트 추가
+  guests: string[];
+  teeOffTime?: string; // 조별 티업 시간 필드 추가
 }
 
 export interface Outing {
