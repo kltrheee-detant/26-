@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Calendar, 
   Users, 
@@ -10,7 +10,11 @@ import {
   AlertTriangle,
   Share2,
   Check,
-  RefreshCw
+  Cloud,
+  CloudOff,
+  Globe,
+  Loader2,
+  Copy
 } from 'lucide-react';
 import { View, Outing, Member, RoundScore, FeeRecord } from './types.ts';
 import Dashboard from './components/Dashboard.tsx';
@@ -24,6 +28,8 @@ import { storageService } from './services/storageService.ts';
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isCloudEnabled, setIsCloudEnabled] = useState(storageService.loadSyncEnabled());
+  const [clubId, setClubId] = useState(storageService.loadClubId());
   const [isKakao, setIsKakao] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
   
@@ -33,7 +39,7 @@ const App: React.FC = () => {
   const [fees, setFees] = useState<FeeRecord[]>([]);
   const [initialCarryover, setInitialCarryover] = useState(0);
 
-  const loadAllData = () => {
+  const loadLocalData = useCallback(() => {
     const savedMembers = storageService.loadMembers();
     const savedOutings = storageService.loadOutings();
     const savedScores = storageService.loadScores();
@@ -41,61 +47,75 @@ const App: React.FC = () => {
     const savedCarryover = storageService.loadCarryover();
 
     setInitialCarryover(savedCarryover);
-
-    if (savedMembers && savedMembers.length > 0) {
-      setMembers(savedMembers);
-    } else {
-      setMembers([
-        { id: '1', name: '김철수', nickname: '독수리', handicap: 12, avatar: 'https://picsum.photos/seed/chulsoo/100', annualFeeTarget: 600000 },
-        { id: '2', name: '이영희', nickname: '버디퀸', handicap: 18, avatar: 'https://picsum.photos/seed/younghee/100', annualFeeTarget: 400000 },
-        { id: '3', name: '박지성', nickname: '산소탱크', handicap: 5, avatar: 'https://picsum.photos/seed/jisung/100', annualFeeTarget: 1000000 }
-      ]);
-    }
+    if (savedMembers && savedMembers.length > 0) setMembers(savedMembers);
     setOutings(savedOutings || []);
     setScores(savedScores || []);
     setFees(savedFees || []);
-  };
+  }, []);
 
-  // URL 해시에서 데이터를 추출하여 자동 동기화
-  const handleUrlImport = () => {
-    const hash = window.location.hash;
-    if (hash.startsWith('#data=')) {
-      const dataStr = hash.substring(6);
-      if (storageService.importFullData(dataStr)) {
-        // 동기화 성공 시 해시 제거하고 새로고침하여 데이터 반영
-        window.history.replaceState(null, '', window.location.pathname);
-        loadAllData();
-        alert('성공적으로 최신 클럽 데이터를 동기화했습니다!');
+  // 클라우드에서 데이터 가져오기
+  const syncFromCloud = useCallback(async () => {
+    if (!isCloudEnabled || !clubId) return;
+    setIsSyncing(true);
+    const remoteData = await storageService.pullFromCloud(clubId);
+    if (remoteData) {
+      const localData = storageService.getFullData();
+      // 원격 데이터가 더 최신일 경우에만 반영 (간단한 타임스탬프 비교)
+      if (remoteData.updatedAt > (localData.updatedAt || 0)) {
+        storageService.importFullData(remoteData);
+        loadLocalData();
       }
     }
-  };
+    setTimeout(() => setIsSyncing(false), 800);
+  }, [clubId, isCloudEnabled, loadLocalData]);
+
+  // 데이터 변경 시 클라우드에 업로드
+  const syncToCloud = useCallback(async () => {
+    if (isCloudEnabled && clubId) {
+      setIsSyncing(true);
+      await storageService.pushToCloud(clubId);
+      setTimeout(() => setIsSyncing(false), 800);
+    }
+  }, [clubId, isCloudEnabled]);
 
   useEffect(() => {
     const ua = navigator.userAgent.toLowerCase();
     if (ua.includes('kakaotalk')) setIsKakao(true);
-    loadAllData();
-    handleUrlImport();
-  }, []);
+    loadLocalData();
 
+    // 초기 클라우드 동기화 및 10초마다 폴링
+    if (isCloudEnabled && clubId) {
+      syncFromCloud();
+      const interval = setInterval(syncFromCloud, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [clubId, isCloudEnabled, syncFromCloud, loadLocalData]);
+
+  // 로컬 상태 변경 시 저장 및 업로드 트리거
   useEffect(() => {
     storageService.saveMembers(members);
     storageService.saveOutings(outings);
     storageService.saveScores(scores);
     storageService.saveFees(fees);
     storageService.saveCarryover(initialCarryover);
-    
-    setIsSyncing(true);
-    const timer = setTimeout(() => setIsSyncing(false), 800);
-    return () => clearTimeout(timer);
-  }, [members, outings, scores, fees, initialCarryover]);
+    syncToCloud();
+  }, [members, outings, scores, fees, initialCarryover, syncToCloud]);
 
-  const handleShareCurrentState = () => {
-    const data = storageService.exportFullData();
-    const shareUrl = `${window.location.origin}${window.location.pathname}#data=${data}`;
-    
-    navigator.clipboard.writeText(shareUrl);
+  const handleToggleCloud = () => {
+    if (!clubId && !isCloudEnabled) {
+      const newId = 'CLUB-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+      setClubId(newId);
+      storageService.saveClubId(newId);
+    }
+    const nextState = !isCloudEnabled;
+    setIsCloudEnabled(nextState);
+    storageService.saveSyncEnabled(nextState);
+  };
+
+  const handleCopyClubId = () => {
+    navigator.clipboard.writeText(clubId);
     setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 3000);
+    setTimeout(() => setCopySuccess(false), 2000);
   };
 
   const renderView = () => {
@@ -119,7 +139,6 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-['Noto_Sans_KR'] selection:bg-emerald-100 selection:text-emerald-900">
-      {/* 사이드바 */}
       <nav className="hidden lg:flex flex-col w-72 bg-emerald-950 text-white p-8 border-r border-emerald-900/50">
         <div className="flex items-center gap-4 mb-12 px-2 cursor-pointer group" onClick={() => setActiveView('dashboard')}>
           <div className="bg-emerald-500 p-3 rounded-2xl shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-all duration-500">
@@ -140,14 +159,36 @@ const App: React.FC = () => {
           <NavItem icon={<MessageSquare size={22} />} label="AI 캐디" active={activeView === 'ai-caddy'} onClick={() => setActiveView('ai-caddy')} />
         </div>
 
-        <div className="mt-8 pt-8 border-t border-emerald-900">
+        <div className="mt-8 pt-8 border-t border-emerald-900 space-y-4">
           <button 
-            onClick={handleShareCurrentState}
-            className={`w-full flex items-center justify-center gap-3 p-4 rounded-2xl border transition-all font-black text-xs ${copySuccess ? 'bg-emerald-500 border-emerald-400 text-white' : 'bg-emerald-900/30 border-emerald-800/50 text-emerald-400 hover:bg-emerald-900/50'}`}
+            onClick={handleToggleCloud}
+            className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${isCloudEnabled ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg' : 'bg-emerald-900/30 border-emerald-800/50 text-emerald-400'}`}
           >
-            {copySuccess ? <Check size={18} /> : <Share2 size={18} />}
-            <span>{copySuccess ? '동기화 링크 복사됨' : '현재 상태 공유'}</span>
+            <div className="flex items-center gap-3">
+              {isCloudEnabled ? <Cloud size={18} /> : <CloudOff size={18} />}
+              <span className="text-xs font-black uppercase tracking-widest">라이브 동기화</span>
+            </div>
+            <div className={`w-8 h-4 rounded-full relative transition-all ${isCloudEnabled ? 'bg-white/30' : 'bg-emerald-950'}`}>
+              <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${isCloudEnabled ? 'left-4.5' : 'left-0.5'}`} />
+            </div>
           </button>
+          
+          {isCloudEnabled && (
+            <div className="bg-emerald-900/50 p-4 rounded-2xl border border-emerald-800/50 animate-in fade-in slide-in-from-bottom-2">
+              <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-1.5">클럽 코드</p>
+              <div className="flex items-center justify-between gap-2">
+                <input 
+                  type="text" 
+                  value={clubId} 
+                  onChange={(e) => { setClubId(e.target.value.toUpperCase()); storageService.saveClubId(e.target.value.toUpperCase()); }}
+                  className="bg-transparent border-none text-white font-black text-sm p-0 focus:ring-0 w-full"
+                />
+                <button onClick={handleCopyClubId} className="text-emerald-500 hover:text-white transition-colors">
+                  {copySuccess ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -159,25 +200,25 @@ const App: React.FC = () => {
               <h1 className="text-xl font-black text-slate-900 tracking-tighter">동물원</h1>
             </div>
             <div className="hidden sm:flex items-center gap-2.5 px-4 py-1.5 bg-slate-50 border border-slate-100 rounded-full">
-               <div className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500'}`} />
-               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{isSyncing ? 'Syncing...' : 'Live System'}</span>
+               <div className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : isCloudEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                 {isSyncing ? '동기화 중...' : isCloudEnabled ? '라이브 연결됨' : '로컬 모드'}
+               </span>
             </div>
           </div>
           
-          <button 
-            onClick={handleShareCurrentState}
-            className={`lg:hidden flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-black shadow-lg transition-all active:scale-95 ${copySuccess ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-slate-900 text-white shadow-slate-900/20'}`}
-          >
-            {copySuccess ? <Check size={16} /> : <Share2 size={16} />}
-            {copySuccess ? '복사 완료' : '전체 공유'}
-          </button>
+          {isCloudEnabled && (
+             <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-2xl animate-pulse">
+                <Globe size={14} className="text-emerald-600" />
+                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">{clubId}</span>
+             </div>
+          )}
         </header>
 
         <main className="flex-1 overflow-y-auto p-5 lg:p-12 pb-32 lg:pb-12 bg-slate-50/50">
           {renderView()}
         </main>
 
-        {/* 모바일 하단 내비게이션 */}
         <nav className="lg:hidden fixed bottom-6 left-6 right-6 h-18 bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-[2rem] flex justify-around items-center px-4 z-50">
           <MobileNavItem icon={<LayoutDashboard />} active={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
           <MobileNavItem icon={<Wallet />} active={activeView === 'fees'} onClick={() => setActiveView('fees')} />
@@ -186,20 +227,6 @@ const App: React.FC = () => {
           <MobileNavItem icon={<Trophy />} active={activeView === 'scores'} onClick={() => setActiveView('scores')} />
         </nav>
       </div>
-
-      {isKakao && (
-        <div className="fixed top-24 left-6 right-6 z-[100] bg-amber-900/95 backdrop-blur-md text-white p-5 rounded-3xl shadow-2xl border border-amber-500/30 animate-in slide-in-from-top duration-500">
-           <div className="flex items-start gap-4">
-              <div className="bg-amber-500 p-2 rounded-2xl text-amber-950 shrink-0"><AlertTriangle size={20} /></div>
-              <div>
-                <p className="text-[11px] leading-relaxed text-amber-100/70 font-medium">
-                  카톡 브라우저에서는 공유 기능이 제한될 수 있습니다. <br/>
-                  <b>'다른 브라우저로 열기'</b>(Chrome, Safari 등)를 권장합니다.
-                </p>
-              </div>
-           </div>
-        </div>
-      )}
     </div>
   );
 };
