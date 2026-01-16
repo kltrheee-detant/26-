@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Calendar, 
   Users, 
@@ -15,7 +15,10 @@ import {
   Globe,
   Loader2,
   Copy,
-  Settings
+  Settings,
+  RefreshCw,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { View, Outing, Member, RoundScore, FeeRecord } from './types.ts';
 import Dashboard from './components/Dashboard.tsx';
@@ -30,6 +33,8 @@ import { storageService } from './services/storageService.ts';
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [isCloudEnabled, setIsCloudEnabled] = useState(storageService.loadSyncEnabled());
   const [clubId, setClubId] = useState(storageService.loadClubId());
   const [isKakao, setIsKakao] = useState(false);
@@ -58,21 +63,33 @@ const App: React.FC = () => {
   const syncFromCloud = useCallback(async () => {
     if (!isCloudEnabled || !clubId) return;
     setIsSyncing(true);
-    const remoteData = await storageService.pullFromCloud(clubId);
-    if (remoteData) {
-      const localData = storageService.getFullData();
-      if (remoteData.updatedAt > (localData.updatedAt || 0)) {
-        storageService.importFullData(remoteData);
-        loadLocalData();
+    try {
+      const remoteData = await storageService.pullFromCloud(clubId);
+      if (remoteData) {
+        const localData = storageService.getFullData();
+        if (remoteData.updatedAt > (localData.updatedAt || 0)) {
+          storageService.importFullData(remoteData);
+          loadLocalData();
+        }
+        setSyncError(false);
+        setLastSyncTime(new Date());
+      } else {
+        // 데이터가 없거나 서버 응답 실패 시
+        setSyncError(true);
       }
+    } catch (err) {
+      setSyncError(true);
+    } finally {
+      setTimeout(() => setIsSyncing(false), 800);
     }
-    setTimeout(() => setIsSyncing(false), 800);
   }, [clubId, isCloudEnabled, loadLocalData]);
 
   const syncToCloud = useCallback(async () => {
     if (isCloudEnabled && clubId) {
       setIsSyncing(true);
-      await storageService.pushToCloud(clubId);
+      const success = await storageService.pushToCloud(clubId);
+      setSyncError(!success);
+      if (success) setLastSyncTime(new Date());
       setTimeout(() => setIsSyncing(false), 800);
     }
   }, [clubId, isCloudEnabled]);
@@ -81,7 +98,6 @@ const App: React.FC = () => {
     const ua = navigator.userAgent.toLowerCase();
     if (ua.includes('kakaotalk')) setIsKakao(true);
     
-    // URL 해시를 통한 다이렉트 임포트 처리
     const hash = window.location.hash;
     if (hash.startsWith('#import=')) {
       const data = hash.replace('#import=', '');
@@ -100,13 +116,18 @@ const App: React.FC = () => {
     }
   }, [clubId, isCloudEnabled, syncFromCloud, loadLocalData]);
 
+  // 로컬 변경 감지 시 저장 및 업로드
   useEffect(() => {
     storageService.saveMembers(members);
     storageService.saveOutings(outings);
     storageService.saveScores(scores);
     storageService.saveFees(fees);
     storageService.saveCarryover(initialCarryover);
-    syncToCloud();
+    
+    // 무한 루프 방지를 위해 실제 동기화 중이 아닐 때만 업로드 트리거
+    if (!isSyncing) {
+      syncToCloud();
+    }
   }, [members, outings, scores, fees, initialCarryover, syncToCloud]);
 
   const handleToggleCloud = () => {
@@ -118,6 +139,7 @@ const App: React.FC = () => {
     const nextState = !isCloudEnabled;
     setIsCloudEnabled(nextState);
     storageService.saveSyncEnabled(nextState);
+    if (nextState) syncFromCloud();
   };
 
   const handleCopyClubId = () => {
@@ -213,22 +235,32 @@ const App: React.FC = () => {
               <h1 className="text-xl font-black text-slate-900 tracking-tighter">동물원</h1>
             </div>
             <div className="hidden sm:flex items-center gap-2.5 px-4 py-1.5 bg-slate-50 border border-slate-100 rounded-full">
-               <div className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : isCloudEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-               <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                 {isSyncing ? '동기화 중...' : isCloudEnabled ? '라이브 연결됨' : '로컬 모드'}
-               </span>
+               <div className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : syncError ? 'bg-orange-500' : isCloudEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+               <div className="flex flex-col">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">
+                  {isSyncing ? '동기화 중...' : syncError ? '연결 확인 중' : isCloudEnabled ? '라이브 연결됨' : '로컬 모드'}
+                </span>
+                {lastSyncTime && isCloudEnabled && !syncError && (
+                  <span className="text-[8px] text-slate-400 font-bold mt-0.5">
+                    마지막 업데이트: {lastSyncTime.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+               </div>
             </div>
           </div>
           
           {isCloudEnabled ? (
-             <button 
-              onClick={handleCopyClubId}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-2xl hover:bg-emerald-100 transition-all active:scale-95"
-             >
-                <Globe size={14} className="text-emerald-600" />
-                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">{clubId}</span>
-                {copySuccess ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} className="text-emerald-400" />}
-             </button>
+             <div className="flex items-center gap-2">
+               {syncError && <div className="text-[10px] font-black text-orange-600 animate-pulse mr-2 hidden md:block">서버 응답 지연</div>}
+               <button 
+                onClick={handleCopyClubId}
+                className={`flex items-center gap-2 px-4 py-2 border rounded-2xl transition-all active:scale-95 ${syncError ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100'}`}
+               >
+                  {syncError ? <WifiOff size={14} /> : <Globe size={14} />}
+                  <span className="text-[10px] font-black uppercase tracking-widest">{clubId}</span>
+                  {copySuccess ? <Check size={12} /> : <Copy size={12} className="opacity-40" />}
+               </button>
+             </div>
           ) : (
             <button 
               onClick={() => setActiveView('settings')}

@@ -11,11 +11,10 @@ const STORAGE_KEYS = {
   SYNC_ENABLED: 'zoo_sync_enabled'
 };
 
-// 무료 공개 KV 저장소 API (데모용)
+// 무료 공개 KV 저장소 API
 const CLOUD_API_URL = 'https://kv.pico.sh/v1';
 
 export const storageService = {
-  // 기본 로컬 저장 로직
   saveMembers: (members: Member[]) => localStorage.setItem(STORAGE_KEYS.MEMBERS, JSON.stringify(members)),
   loadMembers: (): Member[] | null => {
     const data = localStorage.getItem(STORAGE_KEYS.MEMBERS);
@@ -42,13 +41,11 @@ export const storageService = {
     return data ? parseInt(data) : 0;
   },
 
-  // 클럽 ID 및 동기화 설정
   saveClubId: (id: string) => localStorage.setItem(STORAGE_KEYS.CLUB_ID, id),
   loadClubId: () => localStorage.getItem(STORAGE_KEYS.CLUB_ID) || '',
   saveSyncEnabled: (enabled: boolean) => localStorage.setItem(STORAGE_KEYS.SYNC_ENABLED, enabled ? 'true' : 'false'),
   loadSyncEnabled: () => localStorage.getItem(STORAGE_KEYS.SYNC_ENABLED) === 'true',
 
-  // 전체 데이터 객체 생성
   getFullData: () => ({
     members: storageService.loadMembers(),
     outings: storageService.loadOutings(),
@@ -58,34 +55,48 @@ export const storageService = {
     updatedAt: Date.now()
   }),
 
-  // 클라우드 저장 (Push)
+  // 클라우드 저장 (Push) - 타임아웃 및 헤더 추가
   pushToCloud: async (clubId: string) => {
-    if (!clubId) return;
+    if (!clubId) return false;
     const data = storageService.getFullData();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     try {
-      await fetch(`${CLOUD_API_URL}/${clubId}`, {
+      const response = await fetch(`${CLOUD_API_URL}/${clubId}`, {
         method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         body: JSON.stringify(data),
+        signal: controller.signal
       });
-      return true;
+      clearTimeout(timeoutId);
+      return response.ok;
     } catch (e) {
-      console.error("Cloud push failed", e);
+      console.warn("Cloud push failed:", e);
       return false;
     }
   },
 
-  // 클라우드 가져오기 (Pull)
+  // 클라우드 가져오기 (Pull) - 타임아웃 및 헤더 추가
   pullFromCloud: async (clubId: string) => {
     if (!clubId) return null;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     try {
-      const response = await fetch(`${CLOUD_API_URL}/${clubId}`);
+      const response = await fetch(`${CLOUD_API_URL}/${clubId}`, {
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
       if (response.ok) {
-        const remoteData = await response.json();
-        // 로컬 데이터보다 최신일 경우에만 리턴
-        return remoteData;
+        return await response.json();
       }
     } catch (e) {
-      console.error("Cloud pull failed", e);
+      console.warn("Cloud pull failed:", e);
     }
     return null;
   },
@@ -116,7 +127,6 @@ export const storageService = {
     }
   },
 
-  // Fixed Error: Added downloadAsFile to fix the property error in SettingsView.tsx
   downloadAsFile: () => {
     const data = storageService.getFullData();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
