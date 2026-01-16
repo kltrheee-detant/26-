@@ -10,7 +10,8 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { Trophy, Calendar, Users, TrendingUp, ChevronRight, Clock, Wallet, ImageIcon, MapPin, ExternalLink, Target, Sparkles, ReceiptText } from 'lucide-react';
+import { Trophy, Calendar, Users, TrendingUp, ChevronRight, Clock, Wallet, ImageIcon, MapPin, ExternalLink, Target, Sparkles, ReceiptText, Globe, Copy, Check } from 'lucide-react';
+import { storageService } from '../services/storageService.ts';
 
 interface Props {
   outings: Outing[];
@@ -22,6 +23,10 @@ interface Props {
 }
 
 const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCarryover, onNavigateOutings }) => {
+  const [copied, setCopied] = React.useState(false);
+  const clubId = storageService.loadClubId();
+  const isCloud = storageService.loadSyncEnabled();
+
   const upcomingOutings = outings
     .filter(o => o.status === 'upcoming')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -37,21 +42,28 @@ const Dashboard: React.FC<Props> = ({ outings, scores, members, fees, initialCar
     score: s.totalScore 
   }));
 
-  const formatTime = (timeStr?: string) => {
-    if (!timeStr) return '';
-    const [hour, minute] = timeStr.split(':');
-    const h = parseInt(hour);
-    const ampm = h < 12 ? '오전' : '오후';
-    const displayHour = h % 12 || 12;
-    return `${ampm} ${displayHour}:${minute}`;
+  const handleCopyCode = () => {
+    if (clubId) {
+      navigator.clipboard.writeText(clubId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 max-w-6xl mx-auto">
       <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 px-2">
         <div>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
              <span className="px-3 py-1 bg-emerald-600 text-white text-[10px] font-black rounded-full uppercase tracking-widest">Premium Membership</span>
+             {isCloud && clubId && (
+               <button 
+                onClick={handleCopyCode}
+                className="flex items-center gap-1.5 px-3 py-1 bg-white border border-emerald-200 text-emerald-700 text-[10px] font-black rounded-full uppercase tracking-widest hover:bg-emerald-50 transition-all shadow-sm"
+               >
+                 <Globe size={10} /> 클럽 코드: {clubId} {copied ? <Check size={10} className="text-emerald-500" /> : <Copy size={10} className="text-emerald-300" />}
+               </button>
+             )}
           </div>
           <h2 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
             동물원 대시보드 <Sparkles className="text-amber-500 fill-amber-500" size={24} />

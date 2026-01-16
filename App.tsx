@@ -14,7 +14,8 @@ import {
   CloudOff,
   Globe,
   Loader2,
-  Copy
+  Copy,
+  Settings
 } from 'lucide-react';
 import { View, Outing, Member, RoundScore, FeeRecord } from './types.ts';
 import Dashboard from './components/Dashboard.tsx';
@@ -23,6 +24,7 @@ import MemberList from './components/MemberList.tsx';
 import ScoringBoard from './components/ScoringBoard.tsx';
 import AICaddy from './components/AICaddy.tsx';
 import FeeManagement from './components/FeeManagement.tsx';
+import SettingsView from './components/SettingsView.tsx';
 import { storageService } from './services/storageService.ts';
 
 const App: React.FC = () => {
@@ -53,14 +55,12 @@ const App: React.FC = () => {
     setFees(savedFees || []);
   }, []);
 
-  // 클라우드에서 데이터 가져오기
   const syncFromCloud = useCallback(async () => {
     if (!isCloudEnabled || !clubId) return;
     setIsSyncing(true);
     const remoteData = await storageService.pullFromCloud(clubId);
     if (remoteData) {
       const localData = storageService.getFullData();
-      // 원격 데이터가 더 최신일 경우에만 반영 (간단한 타임스탬프 비교)
       if (remoteData.updatedAt > (localData.updatedAt || 0)) {
         storageService.importFullData(remoteData);
         loadLocalData();
@@ -69,7 +69,6 @@ const App: React.FC = () => {
     setTimeout(() => setIsSyncing(false), 800);
   }, [clubId, isCloudEnabled, loadLocalData]);
 
-  // 데이터 변경 시 클라우드에 업로드
   const syncToCloud = useCallback(async () => {
     if (isCloudEnabled && clubId) {
       setIsSyncing(true);
@@ -81,9 +80,19 @@ const App: React.FC = () => {
   useEffect(() => {
     const ua = navigator.userAgent.toLowerCase();
     if (ua.includes('kakaotalk')) setIsKakao(true);
+    
+    // URL 해시를 통한 다이렉트 임포트 처리
+    const hash = window.location.hash;
+    if (hash.startsWith('#import=')) {
+      const data = hash.replace('#import=', '');
+      if (storageService.importFullData(data)) {
+        window.location.hash = '';
+        alert('공유받은 데이터를 성공적으로 불러왔습니다!');
+      }
+    }
+
     loadLocalData();
 
-    // 초기 클라우드 동기화 및 10초마다 폴링
     if (isCloudEnabled && clubId) {
       syncFromCloud();
       const interval = setInterval(syncFromCloud, 10000);
@@ -91,7 +100,6 @@ const App: React.FC = () => {
     }
   }, [clubId, isCloudEnabled, syncFromCloud, loadLocalData]);
 
-  // 로컬 상태 변경 시 저장 및 업로드 트리거
   useEffect(() => {
     storageService.saveMembers(members);
     storageService.saveOutings(outings);
@@ -132,6 +140,8 @@ const App: React.FC = () => {
         return <AICaddy />;
       case 'fees':
         return <FeeManagement fees={fees} members={members} onToggleStatus={(id) => { setFees(fees.map(f => f.id === id ? { ...f, status: f.status === 'paid' ? 'unpaid' : 'paid' } : f)); }} onAdd={(f) => setFees([...fees, f])} onUpdate={(updated) => setFees(fees.map(f => f.id === updated.id ? updated : f))} onDelete={(id) => setFees(fees.filter(f => f.id !== id))} initialCarryover={initialCarryover} onUpdateCarryover={setInitialCarryover} />;
+      case 'settings':
+        return <SettingsView onReload={loadLocalData} />;
       default:
         return <Dashboard outings={outings} scores={scores} members={members} fees={fees} initialCarryover={initialCarryover} onNavigateOutings={() => setActiveView('outings')} />;
     }
@@ -139,6 +149,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-['Noto_Sans_KR'] selection:bg-emerald-100 selection:text-emerald-900">
+      {/* 데스크탑 사이드바 */}
       <nav className="hidden lg:flex flex-col w-72 bg-emerald-950 text-white p-8 border-r border-emerald-900/50">
         <div className="flex items-center gap-4 mb-12 px-2 cursor-pointer group" onClick={() => setActiveView('dashboard')}>
           <div className="bg-emerald-500 p-3 rounded-2xl shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-all duration-500">
@@ -150,19 +161,20 @@ const App: React.FC = () => {
           </div>
         </div>
         
-        <div className="space-y-2.5 flex-1">
+        <div className="space-y-2.5 flex-1 overflow-y-auto no-scrollbar">
           <NavItem icon={<LayoutDashboard size={22} />} label="게시판" active={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
           <NavItem icon={<Wallet size={22} />} label="회비 관리" active={activeView === 'fees'} onClick={() => setActiveView('fees')} />
           <NavItem icon={<Users size={22} />} label="회원 관리" active={activeView === 'members'} onClick={() => setActiveView('members')} />
           <NavItem icon={<Calendar size={22} />} label="라운딩 일정" active={activeView === 'outings'} onClick={() => setActiveView('outings')} />
           <NavItem icon={<Trophy size={22} />} label="스코어" active={activeView === 'scores'} onClick={() => setActiveView('scores')} />
           <NavItem icon={<MessageSquare size={22} />} label="AI 캐디" active={activeView === 'ai-caddy'} onClick={() => setActiveView('ai-caddy')} />
+          <NavItem icon={<Settings size={22} />} label="어플 설정" active={activeView === 'settings'} onClick={() => setActiveView('settings')} />
         </div>
 
         <div className="mt-8 pt-8 border-t border-emerald-900 space-y-4">
           <button 
             onClick={handleToggleCloud}
-            className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${isCloudEnabled ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg' : 'bg-emerald-900/30 border-emerald-800/50 text-emerald-400'}`}
+            className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all ${isCloudEnabled ? 'bg-emerald-500 border-emerald-400 text-white shadow-lg' : 'bg-emerald-900/30 border-emerald-800/50 text-emerald-400 hover:bg-emerald-900/50'}`}
           >
             <div className="flex items-center gap-3">
               {isCloudEnabled ? <Cloud size={18} /> : <CloudOff size={18} />}
@@ -192,6 +204,7 @@ const App: React.FC = () => {
         </div>
       </nav>
 
+      {/* 메인 콘텐츠 영역 */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
         <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 h-20 flex items-center justify-between px-6 lg:px-12 shrink-0 z-30">
           <div className="flex items-center gap-4">
@@ -207,11 +220,22 @@ const App: React.FC = () => {
             </div>
           </div>
           
-          {isCloudEnabled && (
-             <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-2xl animate-pulse">
+          {isCloudEnabled ? (
+             <button 
+              onClick={handleCopyClubId}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-2xl hover:bg-emerald-100 transition-all active:scale-95"
+             >
                 <Globe size={14} className="text-emerald-600" />
                 <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">{clubId}</span>
-             </div>
+                {copySuccess ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} className="text-emerald-400" />}
+             </button>
+          ) : (
+            <button 
+              onClick={() => setActiveView('settings')}
+              className="flex lg:hidden items-center gap-2 px-4 py-2 bg-slate-100 rounded-2xl text-slate-600 hover:bg-slate-200 transition-all"
+            >
+              <Settings size={18} />
+            </button>
           )}
         </header>
 
@@ -219,14 +243,29 @@ const App: React.FC = () => {
           {renderView()}
         </main>
 
+        {/* 모바일 하단 내비게이션 */}
         <nav className="lg:hidden fixed bottom-6 left-6 right-6 h-18 bg-white/90 backdrop-blur-xl border border-slate-200 shadow-2xl rounded-[2rem] flex justify-around items-center px-4 z-50">
           <MobileNavItem icon={<LayoutDashboard />} active={activeView === 'dashboard'} onClick={() => setActiveView('dashboard')} />
           <MobileNavItem icon={<Wallet />} active={activeView === 'fees'} onClick={() => setActiveView('fees')} />
           <MobileNavItem icon={<Users />} active={activeView === 'members'} onClick={() => setActiveView('members')} />
           <MobileNavItem icon={<Calendar />} active={activeView === 'outings'} onClick={() => setActiveView('outings')} />
-          <MobileNavItem icon={<Trophy />} active={activeView === 'scores'} onClick={() => setActiveView('scores')} />
+          <MobileNavItem icon={<Settings />} active={activeView === 'settings'} onClick={() => setActiveView('settings')} />
         </nav>
       </div>
+
+      {isKakao && (
+        <div className="fixed top-24 left-6 right-6 z-[100] bg-amber-900/95 backdrop-blur-md text-white p-5 rounded-3xl shadow-2xl border border-amber-500/30 animate-in slide-in-from-top duration-500">
+           <div className="flex items-start gap-4">
+              <div className="bg-amber-50 p-2 rounded-2xl text-amber-950 shrink-0"><AlertTriangle size={20} /></div>
+              <div>
+                <p className="text-[11px] leading-relaxed text-amber-100/70 font-medium">
+                  카톡 브라우저에서는 동기화 기능이 제한될 수 있습니다. <br/>
+                  <b>'다른 브라우저로 열기'</b>(Chrome, Safari 등)를 이용해 주세요.
+                </p>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
